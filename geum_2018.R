@@ -207,16 +207,83 @@ sapply(fam.default(), as.character)[fam]
 
 aouta<- aster(resp~varb, pred, fam, varb, id, root, data=redata, method = 'nlm')
 
-summary(aout, show.graph=TRUE, info.tol = 1e-10)
+summary(aouta, show.graph=TRUE, info.tol = 1e-10)
 
-aout<- aster(resp~varb + fit:(Region), pred, fam, varb, id, root, data=redata, method = 'nlm')
+aout<- aster(resp~varb + fit:(Region + Block.ID), pred, fam, varb, id, root, data=redata, method = 'nlm')
 
 summary(aout, show.graph=TRUE, info.tol = 1e-10)
 
 anova(aouta, aout)
 
+aoutb<- aster(resp~ varb + fit:Block.ID, pred, fam, varb, id, root, data = redata, method='nlm')
+
+summary(aoutb, show.graph=T, info.tol = 1e-10)
+
 #Make design matrix
-fred <- data.frame(Region=levels(redata$Region),
+fred <- data.frame( Block.ID=levels(redata$Block.ID),
+                   Germination.Y.N=1, Survival.Y.N=1, Survival.Y.N.2018=1,
+                   Flowering.Y.N.2018=1,Total.Flowers.2018=1, 
+                   Fruit.Y.N.2018=1, No.Fruit.2018=1, sm3=1, root = 1)
+
+# reshape the "made up data" just as the actual data
+renewdata <- reshape(fred, varying = list(vars),
+                     direction = "long", timevar = "varb",
+                     times = as.factor(vars), v.names = "resp")
+
+# make character string from "varb" of renewdata, without actual values (e.g., the layers of varb in renewdata)
+layer<- gsub("[0-9]", "", as.character(renewdata$varb))
+
+# add layer to renewdata
+renewdata<- data.frame(renewdata, layer= layer)
+
+# add Seedmass.2016 in new layer col of renewdata as numeric, called fit
+fit<- as.numeric(layer=="sm3")
+
+# add fit to renewdata
+renewdata<- data.frame(renewdata, fit = fit)
+renewdata$fit <- as.numeric(as.character(renewdata$varb) == "sm3")
+
+
+#Generate fintess estimates and standard errors for each block
+nBlock<- nrow(fred)#all data has same number of blocks so any file will do
+nnode<- length(vars)
+amat<- array(0, c(nBlock, nnode, nBlock))
+dim(amat)# makes an 3 x 6 x 3 matrix (2 habitat types and 6 nodes of graphicla model)
+
+
+#only want means for k'th individual that contribute to expected
+#fitness, and want to add only Seedmass.2016 entries
+
+foo<- grepl("sm3", vars)
+for(k in 1:nBlock)
+  amat[k, foo, k]<- 1
+
+
+#check
+foo #yes, only last node is "true"; corresponds to Seedmass.2016
+
+#generate predicted valuses using aout object, with renewdata, and amat format
+pout.amat<- predict(aoutb, newdata= renewdata, varvar= varb,
+                    idvar= id, root = root, se.fit=TRUE, amat = amat, info.tol = 1e-10)
+
+#combine estimates with standard error, and then round
+#to three decimal places
+block<- cbind(pout.amat$fit, pout.amat$se.fit)
+
+
+rownames(block)<- as.character(fred$Region)
+
+
+colnames(block)<- c("Expected Fitness", "SE")
+
+round(block, 3) 
+
+summary(block)# 222.90 corresponds (closest to)  9
+
+#Therefore, use block 9 as "typical" block in estimates for Region
+
+#Make design matrix
+fred <- data.frame(Region=levels(redata$Region), Block.ID=as.factor(9),
                    Germination.Y.N=1, Survival.Y.N=1, Survival.Y.N.2018=1,
                    Flowering.Y.N.2018=1,Total.Flowers.2018=1, 
                    Fruit.Y.N.2018=1, No.Fruit.2018=1, sm3=1, root = 1)
