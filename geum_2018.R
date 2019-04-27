@@ -205,19 +205,53 @@ fam<- c(1,1,1,1,2, 1,2,2) #might want to play with these distributions, especial
 #describe dist. of preds.
 sapply(fam.default(), as.character)[fam]
 
+layer <- gsub("[0-9]", "", as.character(redata$varb))
+unique(layer)
+
+redata <- data.frame(redata, layer = layer)
+with(redata, class(layer))
+
 aouta<- aster(resp~varb, pred, fam, varb, id, root, data=redata, method = 'nlm')
 
 summary(aouta, show.graph=TRUE, info.tol = 1e-10)
 
-aout<- aster(resp~varb + fit:(Region + Block.ID), pred, fam, varb, id, root, data=redata, method = 'nlm')
+aout<- aster(resp~varb + fit:(Block.ID + Region), pred, fam, varb, id, root, data=redata,method='nlm', maxiter=5000)
 
-summary(aout, show.graph=TRUE, info.tol = 1e-10)
+summary(aout, show.graph=TRUE, info.tol = 1e-11)
 
 anova(aouta, aout)
 
-aoutb<- aster(resp~ varb + fit:Block.ID, pred, fam, varb, id, root, data = redata, method='nlm')
+aoutb<- aster(resp~ varb + fit:(Block.ID + Region + Block.ID*Region), pred, fam, varb, id, root, data = redata, method='nlm')
 
 summary(aoutb, show.graph=T, info.tol = 1e-10)
+
+anova(aout, aoutb)
+
+#############################
+
+#To incorporate block effects into fitness estimates for each Retion (or any other factor), split 
+# data into three regions
+
+glalvar<- subset(redata, Region=="GL_alvar")
+glalvar<- droplevels(glalvar)
+
+mbalvar<- subset(redata, Region=="MB_alvar")
+mbalvar<- droplevels(mbalvar)
+
+pra<- subset(redata, Region=="Prairie")
+pra<- droplevels(pra)
+
+####aster analyses with block for each region-specific data set
+
+aout.gla<- aster(resp~varb + fit:(Block.ID), pred, fam, varb, id, root, data=glalvar,method='nlm', maxiter=5000)
+
+aout.mba<- aster(resp~varb + fit:(Block.ID), pred, fam, varb, id, root, data=mbalvar,method='nlm', maxiter=5000)
+
+aout.pra<- aster(resp~varb + fit:(Block.ID), pred, fam, varb, id, root, data=pra,method='nlm', maxiter=5000)
+
+summary(aout.gla, show.graph = T, info.tol = 1e-11)
+summary(aout.mba, show.graph = T, info.tol = 1e-11)
+summary(aout.pra, show.graph = T, info.tol = 1e-11)
 
 #Make design matrix
 fred <- data.frame( Block.ID=levels(redata$Block.ID),
@@ -248,11 +282,11 @@ renewdata$fit <- as.numeric(as.character(renewdata$varb) == "sm3")
 nBlock<- nrow(fred)#all data has same number of blocks so any file will do
 nnode<- length(vars)
 amat<- array(0, c(nBlock, nnode, nBlock))
-dim(amat)# makes an 3 x 6 x 3 matrix (2 habitat types and 6 nodes of graphicla model)
+dim(amat)# makes an 12 x 8x 12 matrix (12 blocs and 8 nodes of graphicla model)
 
 
 #only want means for k'th individual that contribute to expected
-#fitness, and want to add only Seedmass.2016 entries
+#fitness, and want to add only sm3 entries
 
 foo<- grepl("sm3", vars)
 for(k in 1:nBlock)
@@ -263,80 +297,47 @@ for(k in 1:nBlock)
 foo #yes, only last node is "true"; corresponds to Seedmass.2016
 
 #generate predicted valuses using aout object, with renewdata, and amat format
-pout.amat<- predict(aoutb, newdata= renewdata, varvar= varb,
+pout.amat.gla<- predict(aout.gla, newdata= renewdata, varvar= varb,
                     idvar= id, root = root, se.fit=TRUE, amat = amat, info.tol = 1e-10)
 
+pout.amat.mba<- predict(aout.mba, newdata= renewdata, varvar= varb,
+                        idvar= id, root = root, se.fit=TRUE, amat = amat, info.tol = 1e-10)
+
+pout.amat.pra<- predict(aout.pra, newdata= renewdata, varvar= varb,
+                        idvar= id, root = root, se.fit=TRUE, amat = amat, info.tol = 1e-10)
 #combine estimates with standard error, and then round
-#to three decimal places
-block<- cbind(pout.amat$fit, pout.amat$se.fit)
+#to three decimal places for each region
+block.gla<- cbind(pout.amat.gla$fit, pout.amat.gla$se.fit)
+rownames(block.gla)<- as.character(fred$Block.ID)
+colnames(block.gla)<- c("Expected Fitness", "SE")
+
+block.gla<- round(block.gla, 3) 
+block.gla
+
+#use block with median fitness value to represent region
+summary(block.gla)#median = 311.98 (calculated due to even number of blocks), so use:
+
+# Block 4: 303.627 (49.436)
+
+block.mba<- cbind(pout.amat.mba$fit, pout.amat.mba$se.fit)
+rownames(block.mba)<- as.character(fred$Block.ID)
+colnames(block.mba)<- c("Expected Fitness", "SE")
+
+block.mba<- round(block.mba, 3) 
+block.mba
+
+#use block with median fitness value to represent region
+summary(block.mba)#median =117.05, corresponds to block 6 93.55 (49.185)
 
 
-rownames(block)<- as.character(fred$Region)
+block.pra<- cbind(pout.amat.pra$fit, pout.amat.pra$se.fit)
+rownames(block.pra)<- as.character(fred$Block.ID)
+colnames(block.pra)<- c("Expected Fitness", "SE")
+
+block.pra<- round(block.pra, 3) 
+block.pra
+
+summary(block.pra)# median = 70.04; corresponds to block 7: 77.076 (29.768)
 
 
-colnames(block)<- c("Expected Fitness", "SE")
 
-round(block, 3) 
-
-summary(block)# 222.90 corresponds (closest to)  9
-
-#Therefore, use block 9 as "typical" block in estimates for Region
-
-#Make design matrix
-fred <- data.frame(Region=levels(redata$Region), Block.ID=as.factor(9),
-                   Germination.Y.N=1, Survival.Y.N=1, Survival.Y.N.2018=1,
-                   Flowering.Y.N.2018=1,Total.Flowers.2018=1, 
-                   Fruit.Y.N.2018=1, No.Fruit.2018=1, sm3=1, root = 1)
-
-# reshape the "made up data" just as the actual data
-renewdata <- reshape(fred, varying = list(vars),
-                     direction = "long", timevar = "varb",
-                     times = as.factor(vars), v.names = "resp")
-
-# make character string from "varb" of renewdata, without actual values (e.g., the layers of varb in renewdata)
-layer<- gsub("[0-9]", "", as.character(renewdata$varb))
-
-# add layer to renewdata
-renewdata<- data.frame(renewdata, layer= layer)
-
-# add Seedmass.2016 in new layer col of renewdata as numeric, called fit
-fit<- as.numeric(layer=="sm3")
-
-# add fit to renewdata
-renewdata<- data.frame(renewdata, fit = fit)
-renewdata$fit <- as.numeric(as.character(renewdata$varb) == "sm3")
-
-
-#Generate fintess estimates and standard errors for each block
-nRegion<- nrow(fred)#all data has same number of blocks so any file will do
-nnode<- length(vars)
-amat<- array(0, c(nRegion, nnode, nRegion))
-dim(amat)# makes an 3 x 6 x 3 matrix (2 habitat types and 6 nodes of graphicla model)
-
-
-#only want means for k'th individual that contribute to expected
-#fitness, and want to add only Seedmass.2016 entries
-
-foo<- grepl("sm3", vars)
-for(k in 1:nRegion)
-  amat[k, foo, k]<- 1
-
-
-#check
-foo #yes, only last node is "true"; corresponds to Seedmass.2016
-
-#generate predicted valuses using aout object, with renewdata, and amat format
-pout.amat<- predict(aout, newdata= renewdata, varvar= varb,
-                    idvar= id, root = root, se.fit=TRUE, amat = amat, info.tol = 1e-10)
-
-#combine estimates with standard error, and then round
-#to three decimal places
-RegionType<- cbind(pout.amat$fit, pout.amat$se.fit)
-
-
-rownames(RegionType)<- as.character(fred$Region)
-
-
-colnames(RegionType)<- c("Expected Fitness", "SE")
-
-round(RegionType, 3) 
