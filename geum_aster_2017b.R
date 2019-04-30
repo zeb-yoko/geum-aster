@@ -15,41 +15,17 @@ dat<- read.csv("NV_CG_Experiment2wdist2.csv")
 
 #subset data for 2017 analysis
 dat2<- dat[c("Family.Unique",   "Block.ID", "HabitatType", "Region", "Population",
-             "Germination.Y.N","Survival.Y.N","Survival.Y.N.2017", "Flower.Y.N.2016",
-             "Flower.Y.N.2017","No.Flowers.2016","Total.Flowers.2017", "Fruit.Y.N.2016",
-             "Fruit.Y.N.2017", "No.Fruit.2016","No.Fruit.2017", "sm", "sm.2")]
+             "Dist.from.cg.km","Germination.Y.N","Survival.Y.N","Survival.Y.N.2017", 
+             "Flower.Y.N.2016","Flower.Y.N.2017","No.Flowers.2016","Total.Flowers.2017",
+             "Fruit.Y.N.2016","Fruit.Y.N.2017", "No.Fruit.2016","No.Fruit.2017",
+             "sm", "sm.2")]
 
-#make function to look for NAs across all columns with sapply()
-
-fun<- function(x) table(is.na(x))
-
-sapply(dat2, fun) # good, not factors have NA values (note: not using Family.NonUnique)
-sapply(dat2, class) #Block is class integer; make it a factor
-
-#make block.id a factor
-dat2$Block.ID<- as.factor(dat2$Block.ID)
 
 #replace NAs with 0 (zero)
 dat2[is.na(dat2)] <- 0
 
 #make sum of seedmass in 2017 and 2017 a new variable
 #dat2$sm.2017<-dat2$sm + dat2$sm.2
-
-
-
-##############################################
-# Set up simplified graph. models that can be recalled
-# quickly, for the purpose of code cleaning
-
-
-#this is the 2016 graph. model:
-gm2016<- c("Germination.Y.N","Survival.Y.N", "Flower.Y.N.2016", "No.Flowers.2016", "Fruit.Y.N.2016",
- "No.Fruit.2016","sm")
-
-#this is the simplified graph. model for 2017, for cleaning purposes. The later graph. model
-# with contain a "branch".
-gm2017<- c("Germination.Y.N","Survival.Y.N","Survival.Y.N.2017","Flower.Y.N.2017","Total.Flowers.2017",
-           "Fruit.Y.N.2017", "No.Fruit.2017", "sm.2")
 
 
 ########################################################
@@ -92,126 +68,6 @@ subset(dat2, sm >0 & No.Fruit.2016==0)#no errors
 ## mean fitness across different levels of factors. Now move to 2017 data cleaning###
 #####################################################################################
 #####################################################################################
-
-#Below is the check for 2016
-
-#set response variables -> these represent variables in graphical model
-vars<- c("Germination.Y.N","Survival.Y.N", "Flower.Y.N.2016", "No.Flowers.2016","No.Fruit.2016", "sm")
-
-
-#reshape data so that all response variables are located in a single vector in a new data
-#set called "redata"
-redata2016 <- reshape(dat2, varying = list(vars), direction = "long",timevar = "varb", times = as.factor(vars), v.names = "resp")
-
-write.csv(redata2016, file="redata2016.csv", row.names = FALSE, quote = FALSE)
-
-#Designation of fitness variable for 2016 data
-fit <- grepl("sm", as.character(redata2016$varb))
-fit<- as.numeric(fit)
-
-redata2016$fit <- fit
-
-#check
-with(redata2016, sort(unique(as.character(varb)[fit == 0])))
-with(redata2016, sort(unique(as.character(varb)[fit == 1])))
-
-
-#add a variable "root" to redata files, where value is 1
-redata2016<- data.frame(redata2016, root=1)
-
-#make sure Block.ID, Region, Habitat Type, and Population a factor
-#redata2016$Block.ID <- as.factor(redata2016$Block.ID)
-#redata2016$Region <- as.factor(redata2016$Region)
-#redata2016$Population <- as.factor(redata2016$Population)
-#redata2016$HabitatType<- as.factor(redata2016$HabitatType)
-
-#load aster package
-library(aster)
-
-#set graphical mode and dist. for fitness nodes
-pred<- c(0,1,2,3,4,5)
-fam<- c(1,1,1,2,2,2) #might want to play with these distributions, especially seedmass
-
-#describe dist. of preds.
-sapply(fam.default(), as.character)[fam]
-
-#fixed effect model for 2015 with only fitness variable: this is the "basic" model
-# that we compare with later models, to determine significance of facotrs (e.g. Habitat Type, etc.)
-aout<- aster(resp~varb + fit:(Region), pred, fam, varb, id, root, data=redata2016)
-
-summary(aout, show.graph=TRUE)
-
-# generate MLE of saturated model mean value parameter vector: mu
-pout<- predict.aster(aout, se.fit=TRUE)
-
-# make up  data for hypothetical individual that meet "typical" criteria:
-# Therefore, "make up" covariate data for hypothetical individuals that are comparable and obtain mean values for them
-
-# make data.frame of indivudals for each habitat type (Alvar and Prairie)
-
-fred <- data.frame(Region=levels(redata2016$Region),
-                   Germination.Y.N=1, Survival.Y.N=1, Flower.Y.N.2016=1, No.Flowers.2016=1,
-                   No.Fruit.2016=1, sm=1, root = 1)
-
-# reshape the "made up data" just as the actual data
-renewdata <- reshape(fred, varying = list(vars),
-                     direction = "long", timevar = "varb",
-                     times = as.factor(vars), v.names = "resp")
-
-# make character string from "varb" of renewdata, without actual values (e.g., the layers of varb in renewdata)
-layer<- gsub("[0-9]", "", as.character(renewdata$varb))
-
-# add layer to renewdata
-renewdata<- data.frame(renewdata, layer= layer)
-
-# add Seedmass.2016 in new layer col of renewdata as numeric, called fit
-fit<- as.numeric(layer=="sm")
-
-# add fit to renewdata
-renewdata<- data.frame(renewdata, fit = fit)
-
-
-#Generate fintess estimates and standard errors for each block
-nRegion<- nrow(fred)#all data has same number of blocks so any file will do
-nnode<- length(vars)
-amat<- array(0, c(nRegion, nnode, nRegion))
-dim(amat)# makes an 3 x 6 x 3 matrix (2 habitat types and 6 nodes of graphicla model)
-
-#only want means for k'th individual that contribute to expected
-#fitness, and want to add only Seedmass.2016 entries
-
-foo<- grepl("sm", vars)
-for(k in 1:nRegion)
-  amat[k, foo, k]<- 1
-
-#check
-foo #yes, only last node is "true"; corresponds to Seedmass.2016
-
-#generate predicted valuses using aout object, with renewdata, and amat format
-pout.amat<- predict(aout, newdata= renewdata, varvar= varb,
-                    idvar= id, root = root, se.fit=TRUE, amat = amat)
-
-#combine estimates with standard error, and then round
-#to three decimal places
-RegionType<- cbind(pout.amat$fit, pout.amat$se.fit)
-
-
-rownames(RegionType)<- as.character(fred$Region)
-
-
-colnames(RegionType)<- c("Expected Fitness", "SE")
-
-round(RegionType, 3) 
-
-##############################################################################
-##############################################################################
-## The above code cleaned and tested the 2016 data, now move on to 2017 data##
-##############################################################################
-##############################################################################
-
-#recall 2017 graph. model: includes a germ and survival after transplant (2016),
-# so start at survival to 2017 after survial after transplant 
-gm2017
 
 #suvive to 2017 but surv.2016=0
 subset(dat2, Survival.Y.N==0 & Survival.Y.N.2017==1)# no errors
@@ -263,28 +119,17 @@ subset(dat2, Fruit.Y.N.2017==0 & No.Fruit.2017 > 0)# 1 new introduced error
 #fix error: set frt.y.n=1
 dat2$Fruit.Y.N.2017[dat2$Fruit.Y.N.2017==0 & dat2$No.Fruit.2017 > 0]=1
 
+###########################################
+#Begin 2017 analysis
 
-#################################################################################
-##  This should be enough cleaning to check 2017 data with simple aster model  ##
-#################################################################################
+#preliminaries: make 2017 seed mass variable (2016 seedmass + 2017 seedmass)
 
-
-#still not giving reasonable results. Take closer look at factor variables
-    #NOTE: predictors are all being dropped! why?!?!?
+dat2$sm2017<- dat2$sm + dat2$sm.2
 
 
-#isolate factors
-fs<- dat2[c("Family.Unique", "Block.ID", "HabitatType", "Region", "Population")]
-
-sapply(fs, class) #all factors
-
-table(is.na(fs)) # no NAs
-
-sapply(fs, table)# all seems fine with factors.
-
-
-vars<- c("Germination.Y.N", "Survival.Y.N","Survival.Y.N.2017", "Flower.Y.N.2017"   
-         ,"Total.Flowers.2017" ,"Fruit.Y.N.2017","No.Fruit.2017","sm.2")
+vars<- c("Germination.Y.N", "Survival.Y.N","Flower.Y.N.2016", "No.Flowers.2016", 
+         "Fruit.Y.N.2016","No.Fruit.2016", "Survival.Y.N.2017","Flower.Y.N.2017",
+         "Total.Flowers.2017","Fruit.Y.N.2017", "No.Fruit.2017","sm2017")
 
 #reshape data so that all response variables are located in a single vector in a new data
 #set called "redata"
@@ -292,7 +137,7 @@ redata2017 <- reshape(dat2, varying = list(vars), direction = "long",timevar = "
 
 
 #Designation of fitness variable for 2016 data
-fit <- grepl("sm.2", as.character(redata2017$varb))
+fit <- grepl("sm2017", as.character(redata2017$varb))
 fit<- as.numeric(fit)
 
 redata2017$fit <- fit
