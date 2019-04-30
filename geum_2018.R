@@ -200,7 +200,7 @@ redata$Block.ID <- as.factor(redata$Block.ID)
 library(aster)
 
 pred<- c(0,1,2,3,4,5,6,7)
-fam<- c(1,1,1,1,2, 1,2,2) #might want to play with these distributions, especially seedmass
+fam<- c(1,1,1,1,2,1,2,2) #might want to play with these distributions, especially seedmass
 
 #describe dist. of preds.
 sapply(fam.default(), as.character)[fam]

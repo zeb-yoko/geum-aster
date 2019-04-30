@@ -57,14 +57,14 @@ subset(dat2, Survival.Y.N==0 & Flower.Y.N.2016==1 )# errors corrected
 #dat2$Seedmass.2016<- as.integer(dat2$Seedmass.2016)
 
 #set response variables -> these represent variables in graphical model
-vars<- c("Germination.Y.N","Survival.Y.N", "Flower.Y.N.2016", "No.Flowers.2016","No.Fruit.2016", "sm")
+vars<- c("Germination.Y.N","Survival.Y.N", "Flower.Y.N.2016", "No.Flowers.2016","Fruit.Y.N.2016", "No.Fruit.2016", "sm")
 
 
 #reshape data so that all response variables are located in a single vector in a new data
 #set called "redata"
 redata2016 <- reshape(dat2, varying = list(vars), direction = "long",timevar = "varb", times = as.factor(vars), v.names = "resp")
 
-write.csv(redata2016, file="redata2016.csv", row.names = FALSE, quote = FALSE)
+#write.csv(redata2016, file="redata2016.csv", row.names = FALSE, quote = FALSE)
 
 #Designation of fitness variable for 2016 data
 fit <- grepl("sm", as.character(redata2016$varb))
@@ -80,23 +80,26 @@ with(redata2016, sort(unique(as.character(varb)[fit == 1])))
 #add a variable "root" to redata files, where value is 1
 redata2016<- data.frame(redata2016, root=1)
 
-#make sure Block.ID, Region, Habitat Type, and Population a factor
-#redata2016$Block.ID <- as.factor(redata2016$Block.ID)
-#redata2016$Region <- as.factor(redata2016$Region)
-#redata2016$Population <- as.factor(redata2016$Population)
-#redata2016$HabitatType<- as.factor(redata2016$HabitatType)
+
+#check class of redata columns
+
+sapply(redata2016, class)
+
+#make block.id a factor
+
+redata2016$Block.ID<- as.factor(redata2016$Block.ID)
 
 #load aster package
 library(aster)
 
 #set graphical mode and dist. for fitness nodes
-pred<- c(0,1,2,3,4,5)
-fam<- c(1,1,1,2,2,2) #might want to play with these distributions, especially seedmass
+pred<- c(0,1,2,3,4,5,6)
+fam<- c(1,1,1,2,1,2,2) #might want to play with these distributions, especially seedmass
 
 #describe dist. of preds.
 sapply(fam.default(), as.character)[fam]
 
-#fixed effect model for 2015 with only fitness variable: this is the "basic" model
+#fixed effect model for 2016 with only fitness variable: this is the "basic" model
 # that we compare with later models, to determine significance of facotrs (e.g. Habitat Type, etc.)
 aout2016a<- aster(resp~varb, pred, fam, varb, id, root, data=redata2016)
 
@@ -115,26 +118,23 @@ aout2016c<- aster(resp~varb + fit:(HabitatType), pred, fam, varb, id, root, data
 
 summary(aout2016c)
 
-#test habitat type + block.ID
-aout2016c2<- aster(resp~varb + fit:(Region), pred, fam, varb, id, root, data=redata2016)
+anova(aout2016a, aout2016c)#habitat type significant
 
-summary(aout2016c2)
-
-#likelihood test
-anova(aout2016b, aout2016c2)# significant effect of Habitat Type + Block.ID
-
-#add Region
-aout2016d<- aster(resp~varb + fit:(Block.ID + HabitatType), pred, fam, varb, id, root, data=redata2016)
+#test effects of Region
+aout2016d<- aster(resp~varb + fit:(Region), pred, fam, varb, id, root, data=redata2016)
 
 summary(aout2016d)
 
-anova(aout2016c, aout2016d)#significant effect of Region + Block.ID
+#likelihood test
+anova(aout2016a, aout2016d)# significant effect of Region
 
-aout2016e<- aster(resp~varb + fit:(Block.ID + Region), pred, fam, varb, id, root, data=redata2016)
+#add Region
+aout2016e<- aster(resp~varb + fit:(Population), pred, fam, varb, id, root, data=redata2016)
 
-#summary(aout2016e, show.graph = T, info.tol = 1e-16)# NOTE: direction of recession error with Pop
+summary(aout2016e, info.tol = 1e-15)
 
-anova(aout2016c2, aout2016e)#significant effect of Block + Population
+anova(aout2016a, aout2016e)#significant effect of population
+
 
 
 
@@ -150,192 +150,49 @@ anova(aout2016c2, aout2016e)#significant effect of Block + Population
 ###############################################################################
 
 
-# Start with Habitat Type 
-aout<- aster(resp~varb + fit:(Block.ID + Region + Population), pred, fam, varb, id, root, data=redata2016)
+# Start with Region Type 
+aout<- aster(resp~varb + fit:(Region), pred, fam, varb, id, root, data=redata2016)
 
-summary(aout, show.graph = TRUE)
+aout1<- aster(resp~varb + fit:(Region + Block.ID), pred, fam, varb, id, root, data=redata2016)
 
-# generate MLE of saturated model mean value parameter vector: mu
-pout<- predict.aster(aout, se.fit=TRUE)
+aout2<- aster(resp~varb + fit:(Region + Block.ID + Region*Block.ID), pred, fam, varb, id, root, data=redata2016)
 
+anova(aout, aout1, aout2)# block + region sig, but not interaction. 
 
-#exploring directions of recession
-fred <- eigen(aout$fisher, symmetric = TRUE)
-dor <- fred$vectors[ , fred$values == min(fred$values)]
-names(dor) <- names(aout$coefficients)
-dor <- zapsmall(dor / max(dor))
-dor
+#So split the data into Region Specific data sets
 
-modmat <- aout$modmat
-dim(modmat)
+redata2016.gla<- subset(redata2016, Region=="GL_alvar")
+redata2016.gla<- droplevels(redata2016.gla)
 
-modmat <- as.vector(modmat)
-modmat <- matrix(modmat, ncol = length(dor))
-dor.phi <- modmat %*% dor
-dor.phi <- as.vector(dor.phi)
+redata2016.mba<- subset(redata2016, Region=="MB_alvar")
+redata2016.mba<- droplevels(redata2016.mba)
 
+redata2016.pra<- subset(redata2016, Region=="Prairie")
+redata2016.pra<- droplevels(redata2016.pra)
+  
 
-unique(dor.phi)
+#aster analyses with Block.ID for all three region types
 
-sum(dor.phi)
+aout.gla<- aster(resp~varb + fit:(Block.ID), pred, fam, varb, id, root, data=redata2016.gla)
 
-foo <- data.frame(Population = as.character(redata2016$Population),
-                   id = redata2016$id,
-                  varb = as.character(redata2016$varb),
-                  resp = redata2016$resp, stringsAsFactors = FALSE)
- foo <- foo[dor.phi == 1, ]
- 
- foo
+aout.mba<- aster(resp~varb + fit:(Block.ID), pred, fam, varb, id, root, data=redata2016.mba)
 
- unique(foo$Population) #population WA-BLK
- 
- unique(foo$varb) #seed mass
- 
- unique(foo$id) #these individuals
- 
- unique(foo$resp)# just zeros
- 
- #each individual in Population WA-BLK failed to set any seeds (all zeros)
- 
- # Various options exist: merge this pop with anohter, delete this pop from data
- # and just "say" it has zero fitness, change the graphical model: in this case, make 
- # fruit number terminal fitness node?
- 
-    #looking at data, all failed to set fruit, too. But, some (2 inds) produced
-    #a single flower...maybe go with this?
- 
- 
- #take a closer look at data
- tapply(dat2$sm, dat2$Population, max) # hmmm 9 families set a max of zero seeds
- 
- tapply(dat2$No.Fruit.2016, dat2$Population, max)# same nine families failed to set >0 fruit, too
- 
- tapply(dat2$No.Flowers.2016, dat2$Population, max)# only three families did not produce >0 number of flowers 
- 
+aout.pra<- aster(resp~varb + fit:(Block.ID), pred, fam, varb, id, root, data=redata2016.pra)
 
- #####################################################################
- #  So, try No.Flowers.2016 as fitness node (i.e. truncate model)
- #####################################################################
- 
- #set response variables -> these represent variables in graphical model
- vars<- c("Germination.Y.N","Survival.Y.N", "Flower.Y.N.2016", "No.Flowers.2016")
- 
- 
- #reshape data so that all response variables are located in a single vector in a new data
- #set called "redata"
- redata2016 <- reshape(dat2, varying = list(vars), direction = "long",timevar = "varb", times = as.factor(vars), v.names = "resp")
- 
+summary(aout.gla, show.graph = T, info.tol = 1e-16)
 
- #Designation of fitness variable for 2016 data
- fit <- grepl("No.Flowers.2016", as.character(redata2016$varb))
- fit<- as.numeric(fit)
- 
- redata2016b$fit <- fit
- 
- #check
- with(redata2016, sort(unique(as.character(varb)[fit == 0])))
- with(redata2016, sort(unique(as.character(varb)[fit == 1])))
- 
- 
- #add a variable "root" to redata files, where value is 1
- redata2016b<- data.frame(redata2016, root=1)
- 
+summary(aout.mba, show.graph = T, info.tol = 1e-16)
 
- 
- #load aster package
- library(aster)
- 
- #set graphical mode and dist. for fitness nodes
- pred<- c(0,1,2,3)
- fam<- c(1,1,1,2) #might want to play with these distributions, especially seedmass
- 
- #describe dist. of preds.
- sapply(fam.default(), as.character)[fam]
- 
- 
- aout<- aster(resp~varb + fit:(Population), pred, fam, varb, id, root, data=redata2016)
- 
- summary(aout, show.graph = TRUE) #same problem, this time pop "AB-RO" all failed to flower!
- 
- 
- 
- 
- # so hard way, is to redisign the data, so that aster consideres the whole data set
- # as a single individual
- 
- #But we have to re-specify the graphical model, which is difficult
- 
- #kill the graph model
- outies <- dor.phi == 1
- subdata <- redata2016[! outies, ]
- 
- #save real ID values
- id <- subdata$id
- 
- #call it all one indiv
- subdata$id <- 1
- 
- #remake the graph
- idx <- seq(1, nrow(subdata))
-  varb <- as.character(subdata$varb)
-  pred <- rep(NA, length(idx))
-  fam <- rep(NA, length(idx))
-  pred[varb == "sm"] <- 0
-  fam[varb == "sm"] <- 1
-  head(idx[varb == "sm"])
- 
+summary(aout.pra, show.graph = T, info.tol = 1e-16)
 
   
-  
-  sum(varb == "Germination.Y.N") == sum(varb == "Survival.Y.N")#true
-  
-  pred[varb == "Germination.Y.N"] <- idx[varb == "Survival.Y.N"]
-  fam[varb == "Germination.Y.N."] <- 1
-  
-  sum(varb == "Survival.Y.N") == sum(varb == "Flower.Y.N.2016")#true
-  
-  pred[varb == "Survival.Y.N"] <- idx[varb == "Flower.Y.N.2016"]#true
-  fam[varb == "Survival.Y.N"] <- 1
-  
-  sum(varb == "Flower.Y.N.2016") == sum(varb == "No.Flowers.2016")#true
-  
-  pred[varb == "Flower.Y.N.2016"] <- idx[varb == "No.Flowers.2016"]
-  fam[varb == "Flower.Y.N.2016"] <- 1
-  
-  
-  sum(varb == "Flower.Y.N.2016") == sum(varb == "No.Flowers.2016")#true
-  
-  pred[varb == "Flower.Y.N.2016"] <- idx[varb == "No.Flowers.2016"]
-  fam[varb == "Flower.Y.N.2016"] <- 1
-  
-  sum(varb == "No.Flowers.2016") == sum(varb == "No.Fruit.2016")# true
-  
-  pred[varb == "No.Flowers.2016"] <- idx[varb == "No.Fruit.2016"]
-  fam[varb == "No.Flowers.2016"] <- 2
-  
-  sum(varb == "No.Fruit.2016") == sum(varb == "sm")# false
-  
-  bar <- match(id[varb == "sm"], id[varb == "No.Fruit.2016"])
-  pred[varb == "sm"] <- idx[varb == "No.Fruit.2016"][bar]
-  fam[varb == "sm"] <- 2
-  
-#Now remake "varb"
-  subvarb <- paste(as.character(subdata$varb), id, sep = "")
-  subdata <- data.frame(subdata, subvarb = subvarb)
-  
-  aout.sub <- aster(resp ~ varb + fit : Population,
-                    +pred, fam, subvarb, id, root, data = subdata)
-  summary(aout.sub)
-  
-  
-# make up  data for hypothetical individual that meet "typical" criteria:
-# Therefore, "make up" covariate data for hypothetical individuals that are comparable and obtain mean values for them
+#Setting up design matrix that will eventually hold estimates from 'predict'
 
-# make data.frame of indivudals for each habitat type (Alvar and Prairie)
+#Note, we can use the same desing matrix for all three models (3 regions)
 
-fred <- data.frame(HabitatType=levels(redata2016$HabitatType),Family.NonUnique=redata2016$Family.NonUnique,
+fred <- data.frame(Block.ID=levels(redata2016.gla$Block.ID),
                    Germination.Y.N=1, Survival.Y.N=1, Flower.Y.N.2016=1, No.Flowers.2016=1,
-                  No.Fruit.2016=1, sm=1, root = 1)
+                 Fruit.Y.N.2016=1, No.Fruit.2016=1, sm=1, root = 1)
 
 # reshape the "made up data" just as the actual data
 renewdata <- reshape(fred, varying = list(vars),
@@ -356,36 +213,55 @@ renewdata<- data.frame(renewdata, fit = fit)
 
 
 #Generate fintess estimates and standard errors for each block
-nHabitatType<- nrow(fred)#all data has same number of blocks so any file will do
+nBlock<- nrow(fred)#all data has same number of blocks so any file will do
 nnode<- length(vars)
-amat<- array(0, c(nHabitatType, nnode, nHabitatType))
-dim(amat)# makes an 2 x 6 x 2 matrix (2 habitat types and 6 nodes of graphicla model)
+amat<- array(0, c(nBlock, nnode, nBlock))
+dim(amat)# makes an 12 x 7 x 12 matrix (12 blocks types and 7 nodes of graphicla model)
 
-#only want means for k'th individual that contribute to expected
-#fitness, and want to add only Seedmass.2016 entries
+#only want prediction for k'th individual that contribute to expected
+#fitness, and want to add only seedmass (sm) entries
 
 foo<- grepl("sm", vars)
-for(k in 1:nHabitatType)
+for(k in 1:nBlock)
   amat[k, foo, k]<- 1
 
 #check
-foo #yes, only last node is "true"; corresponds to Seedmass.2016
+foo #yes, only last node is "true"; corresponds to "sm"
 
-#generate predicted valuses using aout object, with renewdata, and amat format
-pout.amat<- predict(aout, newdata= renewdata, varvar= varb,
-                        idvar= id, root = root, se.fit=TRUE, amat = amat)
+#generate predicted valuses using region-specific aout object, with renewdata, and amat format
+pout.amat.gla<- predict(aout.gla, newdata= renewdata, varvar= varb,
+                        idvar= id, root = root, se.fit=TRUE, amat = amat, info.tol = 1e-16)
+
+pout.amat.mba<- predict(aout.mba, newdata= renewdata, varvar= varb,
+                    idvar= id, root = root, se.fit=TRUE, amat = amat, info.tol = 1e-16)
+
+pout.amat.pra<- predict(aout.pra, newdata= renewdata, varvar= varb,
+                    idvar= id, root = root, se.fit=TRUE, amat = amat, info.tol = 1e-16)
 
 #combine estimates with standard error, and then round
 #to three decimal places
-Habtype<- cbind(pout.amat$fit, pout.amat$se.fit)
+Region.gla<- cbind(pout.amat.gla$fit, pout.amat.gla$se.fit)
+
+Region.mba<- cbind(pout.amat.mba$fit, pout.amat.mba$se.fit)
+
+Region.pra<- cbind(pout.amat.pra$fit, pout.amat.pra$se.fit)
 
 
-rownames(Habtype)<- as.character(fred$HabitatType)
+rownames(Region.gla)<- as.character(fred$Block.ID)
+rownames(Region.mba)<- as.character(fred$Block.ID)
+rownames(Region.pra)<- as.character(fred$Block.ID)
 
+colnames(Region.gla)<- c("Expected Fitness", "SE")
+colnames(Region.mba)<- c("Expected Fitness", "SE")
+colnames(Region.pra)<- c("Expected Fitness", "SE")
 
-colnames(Habtype)<- c("Expected Fitness", "SE")
+round(Region.gla, 3) 
+round(Region.mba, 3) 
+round(Region.pra, 3) 
 
-round(Habtype, 3) 
+summary(Region.gla)# median = 2.345 corresponds to block 6: 3.027 (1.245)
+summary(Region.mba)# median = 2.50E-10 which is basically zero, so go with smalles non-zero? Block 9 1.6 (2.670)
+summary(Region.pra)# median = 8.055348e-12 (basically zero, as above), so use block 0.061 (0.155)
 
 ###############################################################################
 #     Generate mean fitness (and stand errors) estimates for Regions 
