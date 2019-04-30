@@ -76,6 +76,18 @@ subset(dat2, Survival.Y.N==0 & Survival.Y.N.2017==1)# no errors
 dat2$Survival.Y.N[dat2$Survival.Y.N==0 & dat2$Survival.Y.N.2017==1]=1
 ####################
 
+#flw.no >0, but flw.y.n=0
+subset(dat2, Total.Flowers.2017 >0 & Flower.Y.N.2017==0)# 10 errors
+
+#set flw.y.n=1, but this introduces 3 new erorrs to survival, so recorrect
+dat2$Flower.Y.N.2017[dat2$Total.Flowers.2017 >0 & dat2$Flower.Y.N.2017==0]=1
+
+
+
+
+
+
+
 
 #flowered but no survival
 subset(dat2, Survival.Y.N.2017==0 & Flower.Y.N.2017==1)# 17 errors
@@ -83,11 +95,9 @@ subset(dat2, Survival.Y.N.2017==0 & Flower.Y.N.2017==1)# 17 errors
 #fix errors: set survival.y.n to 1
 dat2$Survival.Y.N.2017[dat2$Survival.Y.N.2017==0 & dat2$Flower.Y.N.2017==1]=1
 
-#flw.no >0, but flw.y.n=0
-subset(dat2, Total.Flowers.2017 >0 & Flower.Y.N.2017==0)# 10 errors
 
-#set flw.y.n=1, but this introduces 3 new erorrs to survival, so recorrect
-dat2$Flower.Y.N.2017[dat2$Total.Flowers.2017 >0 & dat2$Flower.Y.N.2017==0]=1
+
+
 
 #recheck for surv.2017=0 & flw.y.n.2017 =1
 subset(dat2, Survival.Y.N.2017==0 & Flower.Y.N.2017==1)# 3 new errors
