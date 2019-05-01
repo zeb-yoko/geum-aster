@@ -65,41 +65,57 @@ subset(dat2, Survival.Y.N.2017==0 & Flower.Y.N.2017==1)# 17 errors
 #fix errors: set survival.y.n to 1
 dat2$Survival.Y.N.2017[dat2$Survival.Y.N.2017==0 & dat2$Flower.Y.N.2017==1]=1
 
+#suvive to 2017 but surv.2016=0
+subset(dat2, Survival.Y.N==0 & Survival.Y.N.2017==1)# no errors
+
+##################### NEW
+dat2$Survival.Y.N[dat2$Survival.Y.N==0 & dat2$Survival.Y.N.2017==1]=1
+####################
+
 #flw.no >0, but flw.y.n=0
 subset(dat2, Total.Flowers.2017 >0 & Flower.Y.N.2017==0)# 10 errors
 
-#set flw.y.n=1, but this introduces 3 new erorrs to survival, so recorrect
+#following changes confirmed by Zeb 04/30/2019
+dat2$Total.Flowers.2017[dat2$Family.Unique=="MB-CRN_10" & dat2$Block.ID==1]=0
+dat2$Total.Flowers.2017[dat2$Family.Unique=="MB-CRN_2" & dat2$Block.ID==7]=0
+
+#set flw.y.n=1 for these above cases
 dat2$Flower.Y.N.2017[dat2$Total.Flowers.2017 >0 & dat2$Flower.Y.N.2017==0]=1
 
-#recheck for surv.2017=0 & flw.y.n.2017 =1
-subset(dat2, Survival.Y.N.2017==0 & Flower.Y.N.2017==1)# 3 new errors
-
-#fix errors: set survival.y.n to 1 to correct these new errors
-dat2$Survival.Y.N.2017[dat2$Survival.Y.N.2017==0 & dat2$Flower.Y.N.2017==1]=1
 
 #fruit.y.n =1, flw.no=0
 subset(dat2, Fruit.Y.N.2017==1 & Total.Flowers.2017 ==0)# 7 errors
 
-#fix errors: set total.flw =1: this should be checked by Zeb
-dat2$Total.Flowers.2017[dat2$Fruit.Y.N.2017==1 & dat2$Total.Flowers.2017 ==0]=1
+#change total number of flowers (2017) to 1. Confirmed by Zeb 04/30/2019
+dat2$Total.Flowers.2017[dat$Fruit.Y.N.2017==1 & dat2$Total.Flowers.2017 ==0]=1
 
-#frt.no >0, but frt.y.n=0
-subset(dat2, Fruit.Y.N.2017==0 & No.Fruit.2017 > 0)# many errors
 
-#fix errors: set frt.y.n=1 for these erors -> this should be checked by Zeb
-dat2$Fruit.Y.N.2017[dat2$Fruit.Y.N.2017==0 & dat2$No.Fruit.2017 > 0]=1
+#frt number >0, but fruit.y.n==0
+subset(dat2, No.Fruit.2017 > 0 & Fruit.Y.N.2017==0)
 
-#sm.2 >0 but frt.no =0
-subset(dat2, sm.2 > 0 & No.Fruit.2017 ==0)# 5 error
+#the following changes confirmed by Zeb 04/30/2019
+dat2$No.Fruit.2017[dat2$Family.Unique=="MB-CRN_2" & dat2$Block.ID==7]=0
 
-#fix errors: set frut.No=1, but will introduce 1 new error with frut.y.n, so recheck
-dat2$No.Fruit.2017[dat2$sm.2 > 0 & dat2$No.Fruit.2017 ==0]=1
+#Change remaining issues (from line98) to Fruit.Y.N.2017=1, confirmed by Zeb 04/30/2019
+dat2$Fruit.Y.N.2017[dat2$No.Fruit.2017 > 0 & dat2$Fruit.Y.N.2017==0]=1
 
-#recheck frt.no >0, but frt.y.n=0
-subset(dat2, Fruit.Y.N.2017==0 & No.Fruit.2017 > 0)# 1 new introduced error
+#seed mass >0 but fruit number 2017 =0
+subset(dat2, sm.2 > 0 & No.Fruit.2017==0)
 
-#fix error: set frt.y.n=1
-dat2$Fruit.Y.N.2017[dat2$Fruit.Y.N.2017==0 & dat2$No.Fruit.2017 > 0]=1
+#the following changes confirmed by Zeb 04/30/2019
+dat2$sm.2[dat2$Family.Unique=="MB-CRN_2" & dat2$Block.ID==7]=0
+
+# Removing individuals: CAR-NBA_4, MB-MR_32, NAP-CE_6, SD-MUD_10, SD-PMG_NA
+
+dat3<-dat2[!(dat2$sm.2 >0 & dat2$No.Fruit.2017==0),]
+
+dat2<-dat3
+
+#now make new survival to 2017 after winter of 2016 variable
+
+dat2$Surv2017[dat2$Flower.Y.N.2017==1]=1
+
+dat2$Surv2017[is.na(dat2$Surv2017)] <- 0
 
 ######################################################################################
 # Now begin cleaning the 2018 data
@@ -213,7 +229,7 @@ with(redata, class(layer))
 
 aouta<- aster(resp~varb, pred, fam, varb, id, root, data=redata, method = 'nlm')
 
-summary(aouta, show.graph=TRUE, info.tol = 1e-10)
+summary(aouta, show.graph=TRUE,info.tol = 1e-10)
 
 aout<- aster(resp~varb + fit:(Block.ID + Region), pred, fam, varb, id, root, data=redata,method='nlm', maxiter=5000)
 
