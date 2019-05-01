@@ -47,11 +47,16 @@ nfl16 <- flr.16[!is.na(flr.16$No.Flowers.2016),]
 class(nfl16$No.Flowers.2016)
 range(nfl16$No.Flowers.2016)
 descdist(nfl16$No.Flowers.2016, boot = 100)
-f1g <- fitdist(nfl16$No.Flowers.2016, "norm")
-f2g <- fitdist(nfl16$No.Flowers.2016, "pois")
-f3g <- fitdist(nfl16$No.Flowers.2016, "nbinom")
-f4g <- fitdist(nfl16$No.Flowers.2016, "lnorm")
-f5g <- fitdist(nfl16$No.Flowers.2016, "exp")
+##NOTE--calculated from MASS, so comparison of AIC works##
+f1g <- fitdistr(nfl16$No.Flowers.2016, "normal")
+f2g <- fitdistr(nfl16$No.Flowers.2016, "poisson")
+f3g <- fitdistr(nfl16$No.Flowers.2016, "negative binomial") ##estimate 1.2732
+nfl16.nb<-f3g$estimate[1]
+
+f4g <- fitdistr(nfl16$No.Flowers.2016, "gamma")
+f5g <- fitdistr(nfl16$No.Flowers.2016, "exponential")
+library(MASS)		
+AIC(f1g,f2g,f3g,f4g,f5g)
 plot(f1g)
 plot(f2g)
 plot(f3g)
@@ -83,10 +88,16 @@ range(nfl16$No.Fruit.2016)
 descdist(nfl16$No.Fruit.2016, boot = 100)
 f1g <- fitdist(nfl16$No.Fruit.2016, "norm")
 f2g <- fitdist(nfl16$No.Fruit.2016, "pois")
-f3g <- fitdist(nfl16$No.Fruit.2016, "nbinom")
+f3g <- fitdist(nfl16$No.Fruit.2016, "nbinom") ##parameter 0.1391973
+nfr16.nb<-f3g$estimate[1]
+
 f4g <- fitdist(nfl16$No.Fruit.2016, "lnorm")
+##doesn't work##
 f5g <- fitdist(nfl16$No.Fruit.2016, "exp")
-?fitdist
+?gofstat
+fits <- list(f1g,f2g,f3g,f5g)
+gofstat(fits)
+##Visual comparison of distribution##
 plot(f1g)
 plot(f2g)
 plot(f3g)
@@ -108,7 +119,9 @@ range(seeds16$sm)
 descdist(seeds16$sm, boot = 100)
 f1g <- fitdist(seeds16$sm, "norm")
 f2g <- fitdist(seeds16$sm, "pois")
-f3g <- fitdist(seeds16$sm, "nbinom")
+f3g <- fitdist(seeds16$sm, "nbinom") ##estimate 68466523
+sm16.nb <- f3g$estimate[1]
+
 f4g <- fitdist(seeds16$sm, "lnorm")
 ##lnorm not working##
 f5g <- fitdist(seeds16$sm, "exp")
@@ -117,6 +130,9 @@ plot(f2g)
 plot(f3g)
 plot(f4g)
 plot(f5g)
+fits <- list(f1g,f2g,f3g,f5g)
+gofstat(fits)
+
 ##############################
 ##Conclusion: again either pois or nbinom--probably ZIP##
 ##############################
@@ -164,7 +180,8 @@ range(nfl17$Total.Flowers.2017)
 descdist(nfl17$Total.Flowers.2017, boot = 100)
 f1g <- fitdist(nfl17$Total.Flowers.2017, "norm")
 f2g <- fitdist(nfl17$Total.Flowers.2017, "pois")
-f3g <- fitdist(nfl17$Total.Flowers.2017, "nbinom")
+f3g <- fitdist(nfl17$Total.Flowers.2017, "nbinom") ##estimate: 1.753497
+nfl17.nb<-f3g$estimate[1]
 f4g <- fitdist(nfl17$Total.Flowers.2017, "lnorm")
 f5g <- fitdist(nfl17$Total.Flowers.2017, "exp")
 plot(f1g)
@@ -174,6 +191,9 @@ plot(f4g)
 plot(f5g)
 summary(f1g)
 summary(f3g)
+fits <- list(f1g,f2g,f3g,f5g)
+gofstat(fits)
+
 ##############################
 ##Conclusion: Looks most like nbinom, next closest is normal?##
 ##############################
@@ -198,7 +218,8 @@ range(nfl17$No.Fruit.2017)
 descdist(nfl17$No.Fruit.2017, boot = 100)
 f1g <- fitdist(nfl17$No.Fruit.2017, "norm")
 f2g <- fitdist(nfl17$No.Fruit.2017, "pois")
-f3g <- fitdist(nfl17$No.Fruit.2017, "nbinom")
+f3g <- fitdist(nfl17$No.Fruit.2017, "nbinom") ##estimate 1.951956
+nfr17.nb<-f3g$estimate[1]
 f4g <- fitdist(nfl17$No.Fruit.2017, "lnorm")
 ##lnorm doesn't work##
 f5g <- fitdist(nfl17$No.Fruit.2017, "exp")
@@ -208,6 +229,9 @@ plot(f3g)
 plot(f4g)
 plot(f5g)
 summary(f3g)
+fits <- list(f1g,f2g,f3g,f5g)
+gofstat(fits)
+
 ##############################
 ##Conclusion: nbinom##
 ##############################
@@ -223,7 +247,8 @@ summary(df$sm.2)
 flr17 <- flr.17[!is.na(flr.17$sm.2),]
 f1g <- fitdist(flr17$sm.2, "norm")
 f2g <- fitdist(flr17$sm.2, "pois")
-f3g <- fitdist(flr17$sm.2, "nbinom")
+f3g <- fitdist(flr17$sm.2, "nbinom") ##estimate .9277568
+sm17.nb<-f3g$estimate[1]
 plot(f1g)
 plot(f2g)
 plot(f3g)
@@ -232,6 +257,9 @@ summary(flr17$sm.2)
 glimpse(flr17$sm.2)
 mean(df$sm.2, na.rm =T)
 summary(seed17.mod)
+fits <- list(f1g,f2g,f3g,f5g)
+gofstat(fits)
+
 ##############################
 ##Conclusion: nbinom##
 
@@ -253,8 +281,11 @@ plot(f2g)
 plot(f3g)
 plot(f4g)
 plot(f5g)
-##Conclusion: Poisson##
+fits <- list(f1g,f2g,f3g,f5g)
+gofstat(fits)
+
 ##############################
+##Conclusion: Poisson##
 
 ##Total Flowers 2018##
 ##############################
@@ -266,11 +297,16 @@ hist(flr.18$Total.Flowers.2018)
 f1g <- fitdist(flr18$Total.Flowers.2018, "norm")
 f2g <- fitdist(flr18$Total.Flowers.2018, "pois")
 fg3 <- fitdist(log(flr18$Total.Flowers.2018), "norm")
-f4g <- fitdist(flr18$Total.Flowers.2018, "nbinom")
+f4g <- fitdist(flr18$Total.Flowers.2018, "nbinom") ##estimate 1.81233
+nfl18.nb<-f4g$estimate[1]
+
 plot(f1g)
 plot(f2g)
 plot(fg3)
 plot(f4g)
+fits <- list(f1g,f2g,f3g,f5g)
+gofstat(fits)
+
 ##############################
 ##Conclusion: nbinom or lnorm dist##
 
@@ -283,11 +319,15 @@ hist(flr.18$No.Fruit.2018)
 f1g <- fitdist(flr18$No.Fruit.2018, "norm")
 f2g <- fitdist(flr18$No.Fruit.2018, "pois")
 fg3 <- fitdist(log(flr18$No.Fruit.2018), "norm")
-f4g <- fitdist(flr18$No.Fruit.2018, "nbinom")
+f4g <- fitdist(flr18$No.Fruit.2018, "nbinom") ##estimate 2.511923
+nfr18.nb<-f4g$estimate[1]
 plot(f1g)
 plot(f2g)
 plot(fg3)
 plot(f4g)
+fits <- list(f1g,f2g,f3g,f5g)
+gofstat(fits)
+
 ##############################
 ##Conclusion: nbinom dist##
 
@@ -303,11 +343,17 @@ flr18 <- flr.18[!is.na(flr.18$seedmass.2018.g.),]
 f1g <- fitdist(flr18$seedmass.2018.g., "norm")
 f2g <- fitdist(flr18$seedmass.2018.g., "pois")
 fg3 <- fitdist(flr18$seedmass.2018.g., "lnorm")
-f4g <- fitdist(flr18$seedmass.2018.g., "nbinom")
+f4g <- fitdist(flr18$seedmass.2018.g., "nbinom") ##estimate N/A
+sm18.nb<-f4g$estimate[1]
+
+summary(f3g)
 plot(f1g)
 plot(f2g)
 plot(fg3)
 plot(f4g)
+fits <- list(f1g,f2g,f3g,f5g)
+gofstat(fits)
+
 ##############################
 ##Says failed to converge for poisson and nbinom##
 
