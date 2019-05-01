@@ -57,7 +57,7 @@ subset(dat2, Survival.Y.N==0 & Flower.Y.N.2016==1 )# errors corrected
 #dat2$Seedmass.2016<- as.integer(dat2$Seedmass.2016)
 
 #set response variables -> these represent variables in graphical model
-vars<- c("Germination.Y.N","Survival.Y.N", "Flower.Y.N.2016", "No.Flowers.2016","Fruit.Y.N.2016", "No.Fruit.2016", "sm")
+vars<- c("Germination.Y.N","Survival.Y.N", "Flower.Y.N.2016", "No.Flowers.2016", "No.Fruit.2016", "sm")
 
 
 #reshape data so that all response variables are located in a single vector in a new data
@@ -89,24 +89,61 @@ sapply(redata2016, class)
 
 redata2016$Block.ID<- as.factor(redata2016$Block.ID)
 
+###############################################################
+#look into distributions for nodes
+
+#recall nodes of graphical model
+vars
+
+#Germ, Survival, Flower.Y.N, all bernoulli
+
+flwno<- dat2$No.Flowers.2016
+frtno<- dat2$No.Fruit.2016
+sm<- dat2$sm
+
+library(MASS)
+
+fl.1<- fitdistr(flwno, "normal")
+fl.2<- fitdistr(flwno, "negative binomial")#size: 0.100382478
+fl.3<- fitdistr(flwno, "poisson")
+
+AIC(fl.1, fl.2, fl.3)
+
+frt.1<- fitdistr(frtno, "normal")
+frt.2<- fitdistr(frtno, "negative binomial")#size: 0.028216933
+frt.3<- fitdistr(frtno, "poisson")
+
+AIC(frt.1, frt.2, frt.3)
+
+sm.1<- fitdistr(sm, "normal")
+sm.2<- fitdistr(sm, "negative binomial")#size: 0.0058752672
+sm.3<- fitdistr(sm, "poisson")
+
+AIC(sm.1, sm.2, sm.3)
+
 #load aster package
 library(aster)
 
+#set family list
+
+famlist<- list(fam.bernoulli(), fam.negative.binomial(0.100382478), fam.negative.binomial(0.028216933),
+               fam.negative.binomial(0.0058752672))
+
 #set graphical mode and dist. for fitness nodes
-pred<- c(0,1,2,3,4,5,6)
-fam<- c(1,1,1,2,1,2,2) #might want to play with these distributions, especially seedmass
+pred<- c(0,1,2,3,4,5)
+fam<- c(1,1,1,2,3,4) #might want to play with these distributions, especially seedmass
 
 #describe dist. of preds.
 sapply(fam.default(), as.character)[fam]
 
 #fixed effect model for 2016 with only fitness variable: this is the "basic" model
 # that we compare with later models, to determine significance of facotrs (e.g. Habitat Type, etc.)
-aout2016a<- aster(resp~varb, pred, fam, varb, id, root, data=redata2016)
+aout2016a<- aster(resp~varb, pred, fam, varb, id, root, data=redata2016, famlist = famlist)
 
 summary(aout2016a, show.graph=TRUE)
 
 #Add block ID
-aout2016b<- aster(resp~varb + fit:(Block.ID), pred, fam, varb, id, root, data=redata2016)
+aout2016b<- aster(resp~varb + fit:(Block.ID), pred, fam, varb, id, root, data=redata2016, famlist = famlist)
 
 summary(aout2016b, show.graph = TRUE)
 
@@ -114,14 +151,14 @@ summary(aout2016b, show.graph = TRUE)
 anova(aout2016a, aout2016b)# significant effect of block
 
 #add habitat type
-aout2016c<- aster(resp~varb + fit:(HabitatType), pred, fam, varb, id, root, data=redata2016)
+aout2016c<- aster(resp~varb + fit:(HabitatType), pred, fam, varb, id, root, data=redata2016, famlist = famlist)
 
 summary(aout2016c)
 
 anova(aout2016a, aout2016c)#habitat type significant
 
 #test effects of Region
-aout2016d<- aster(resp~varb + fit:(Region), pred, fam, varb, id, root, data=redata2016)
+aout2016d<- aster(resp~varb + fit:(Region), pred, fam, varb, id, root, data=redata2016, famlist = famlist)
 
 summary(aout2016d)
 
@@ -129,9 +166,9 @@ summary(aout2016d)
 anova(aout2016a, aout2016d)# significant effect of Region
 
 #add Region
-aout2016e<- aster(resp~varb + fit:(Population), pred, fam, varb, id, root, data=redata2016)
+aout2016e<- aster(resp~varb + fit:(Population), pred, fam, varb, id, root, data=redata2016, famlist = famlist)
 
-summary(aout2016e, info.tol = 1e-15)
+summary(aout2016e, info.tol = 1e-11)#direction of recession/constancy!
 
 anova(aout2016a, aout2016e)#significant effect of population
 
@@ -151,15 +188,15 @@ anova(aout2016a, aout2016e)#significant effect of population
 
 
 # Start with Region Type 
-aout<- aster(resp~varb + fit:(Region), pred, fam, varb, id, root, data=redata2016)
+aout<- aster(resp~varb + fit:(Region), pred, fam, varb, id, root, data=redata2016, famlist = famlist)
 
-aout1<- aster(resp~varb + fit:(Region + Block.ID), pred, fam, varb, id, root, data=redata2016)
+aout1<- aster(resp~varb + fit:(Region + Block.ID), pred, fam, varb, id, root, data=redata2016, famlist = famlist)
 
-aout2<- aster(resp~varb + fit:(Region + Block.ID + Region*Block.ID), pred, fam, varb, id, root, data=redata2016)
+aout2<- aster(resp~varb + fit:(Region + Block.ID + Region*Block.ID), pred, fam, varb, id, root, data=redata2016, famlist = famlist)
 
 anova(aout, aout1, aout2)# block + region sig, but not interaction. 
 
-#So split the data into Region Specific data sets
+#So, split the data into Region Specific data sets
 
 redata2016.gla<- subset(redata2016, Region=="GL_alvar")
 redata2016.gla<- droplevels(redata2016.gla)
