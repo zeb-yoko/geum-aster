@@ -98,36 +98,42 @@ vars
 #Germ, Survival, Flower.Y.N, all bernoulli
 
 flwno<- dat2$No.Flowers.2016
+flw.no<- subset(flwno, flwno >0)
 frtno<- dat2$No.Fruit.2016
+frt.no<-subset(frtno, frtno >0)
 sm<- dat2$sm
+sm.0<- subset(sm, sm > 0)
 
 library(MASS)
 
-fl.1<- fitdistr(flwno, "normal")
-fl.2<- fitdistr(flwno, "negative binomial")#size: 0.100382478
-fl.3<- fitdistr(flwno, "poisson")
+fl.1<- fitdistr(flw.no, "normal")
+fl.2<- fitdistr(flw.no, "negative binomial")#size: 1.12571436
+fl.3<- fitdistr(flw.no, "poisson")
 
 AIC(fl.1, fl.2, fl.3)
 
-frt.1<- fitdistr(frtno, "normal")
-frt.2<- fitdistr(frtno, "negative binomial")#size: 0.028216933
-frt.3<- fitdistr(frtno, "poisson")
+frt.1<- fitdistr(frt.no, "normal")
+frt.2<- fitdistr(frt.no, "negative binomial")#size: 3.5074887
+frt.3<- fitdistr(frt.no, "poisson")
 
 AIC(frt.1, frt.2, frt.3)
 
-sm.1<- fitdistr(sm, "normal")
-sm.2<- fitdistr(sm, "negative binomial")#size: 0.0058752672
-sm.3<- fitdistr(sm, "poisson")
+sm.1<- fitdistr(sm.0, "normal")
+sm.2<- fitdistr(sm.0, "negative binomial")#size: 1.0341103
+sm.3<- fitdistr(sm.0, "poisson")
 
 AIC(sm.1, sm.2, sm.3)
+
+#####################################
+#need to check dist for region-specific 
 
 #load aster package
 library(aster)
 
 #set family list
 
-famlist<- list(fam.bernoulli(), fam.negative.binomial(0.100382478), fam.negative.binomial(0.028216933),
-               fam.negative.binomial(0.0058752672))
+famlist<- list(fam.bernoulli(), fam.negative.binomial(1.12571436), fam.negative.binomial(3.5074887),
+               fam.negative.binomial(1.0341103))
 
 #set graphical mode and dist. for fitness nodes
 pred<- c(0,1,2,3,4,5)
@@ -168,7 +174,7 @@ anova(aout2016a, aout2016d)# significant effect of Region
 #add Region
 aout2016e<- aster(resp~varb + fit:(Population), pred, fam, varb, id, root, data=redata2016, famlist = famlist)
 
-summary(aout2016e, info.tol = 1e-11)#direction of recession/constancy!
+summary(aout2016e, info.tol = 1e-15)#direction of recession/constancy!
 
 anova(aout2016a, aout2016e)#significant effect of population
 
@@ -194,6 +200,10 @@ aout1<- aster(resp~varb + fit:(Region + Block.ID), pred, fam, varb, id, root, da
 
 aout2<- aster(resp~varb + fit:(Region + Block.ID + Region*Block.ID), pred, fam, varb, id, root, data=redata2016, famlist = famlist)
 
+summary(aout, show.graph = T)
+summary(aout1, show.graph= T)
+summary(aout2, show.graph = T, info.tol = 1e-15)
+
 anova(aout, aout1, aout2)# block + region sig, but not interaction. 
 
 #So, split the data into Region Specific data sets
@@ -201,26 +211,82 @@ anova(aout, aout1, aout2)# block + region sig, but not interaction.
 redata2016.gla<- subset(redata2016, Region=="GL_alvar")
 redata2016.gla<- droplevels(redata2016.gla)
 
+dat.gla<- subset(dat2, Region=="GL_alvar")
+gla.flw<- subset(dat.gla, No.Flowers.2016 >0 )
+gla.flw<- gla.flw$No.Flowers.2016
+
+gla.flw.0<- fitdistr(gla.flw, "negative binomial")# size: 1.10997286
+
+gla.frt<- subset(dat.gla, No.Fruit.2016 > 0)
+gla.frt<- gla.frt$No.Fruit.2016
+
+gla.frt.0<- fitdistr(gla.frt, "negative binomial")# size: 3.3698966
+
+gla.sm<- subset(dat.gla, sm > 0)
+gla.sm<- gla.sm$sm
+
+gla.sm.0<- fitdistr(gla.sm, "negative binomial")# size: 1.0217064
+
 redata2016.mba<- subset(redata2016, Region=="MB_alvar")
 redata2016.mba<- droplevels(redata2016.mba)
 
+dat.mba<- subset(dat2, Region=="MB_alvar")
+mba.flw<- subset(dat.mba, No.Flowers.2016 > 0)
+mba.flw<- mba.flw$No.Flowers.2016
+
+mba.flw.0<- fitdistr(mba.flw, "negative binomial")# size: 1.7177893
+
+mba.frt<- subset(dat.mba, No.Fruit.2016 >0)
+mba.frt<- mba.frt$No.Fruit.2016
+
+mba.frt.0<- fitdistr(mba.frt, "negative binomial")# size: 100.00010
+
+mba.sm<- subset(dat.mba, sm > 0)
+mba.sm<- mba.sm$sm
+
+mba.sm.0<- fitdistr(mba.sm, "negative binomial")# size: 10.57473
+
+
 redata2016.pra<- subset(redata2016, Region=="Prairie")
 redata2016.pra<- droplevels(redata2016.pra)
-  
+
+dat.pra<- subset(dat2, Region=="Prairie")
+pra.flw<- subset(dat.pra, No.Flowers.2016 > 0)
+pra.flw<- pra.flw$No.Flowers.2016
+
+pra.flw.0<- fitdistr(pra.flw, "negative binomial")# size: 2.2972941
+
+pra.frt<- subset(dat.pra, No.Fruit.2016 > 0)
+pra.frt<- pra.frt$No.Fruit.2016
+
+pra.frt.0<- fitdistr(pra.frt, "negative binomial")# size: 100.0001238
+
+pra.sm<- subset(dat.pra, sm > 0)
+pra.sm<- pra.sm$sm
+
+pra.sm.0<- fitdistr(pra.sm, "negative binomial")# size: 1.481091
 
 #aster analyses with Block.ID for all three region types
 
-aout.gla<- aster(resp~varb + fit:(Block.ID), pred, fam, varb, id, root, data=redata2016.gla)
+famlist.gla<- list(fam.bernoulli(), fam.negative.binomial(1.10997286), fam.negative.binomial(3.3698966), fam.negative.binomial(1.0217064))
 
-aout.mba<- aster(resp~varb + fit:(Block.ID), pred, fam, varb, id, root, data=redata2016.mba)
+aout.gla<- aster(resp~varb + fit:(Block.ID), pred, fam, varb, id, root, data=redata2016.gla, famlist = famlist.gla)
 
-aout.pra<- aster(resp~varb + fit:(Block.ID), pred, fam, varb, id, root, data=redata2016.pra)
 
-summary(aout.gla, show.graph = T, info.tol = 1e-16)
+famlist.mba<- list(fam.bernoulli(), fam.negative.binomial(1.7177893), fam.negative.binomial(100.00010), fam.negative.binomial(10.57473))
 
-summary(aout.mba, show.graph = T, info.tol = 1e-16)
+aout.mba<- aster(resp~varb + fit:(Block.ID), pred, fam, varb, id, root, data=redata2016.mba, famlist = famlist.mba)
 
-summary(aout.pra, show.graph = T, info.tol = 1e-16)
+
+famlist.pra<- list(fam.bernoulli(), fam.negative.binomial(2.2972941), fam.negative.binomial(100.0001238), fam.negative.binomial(1.481091))
+
+aout.pra<- aster(resp~varb + fit:(Block.ID), pred, fam, varb, id, root, data=redata2016.pra, famlist = famlist.pra)
+
+summary(aout.gla, show.graph = T, info.tol = 1e-14)
+
+summary(aout.mba, show.graph = T, info.tol = 1e-15)
+
+summary(aout.pra, show.graph = T, info.tol = 1e-14)
 
   
 #Setting up design matrix that will eventually hold estimates from 'predict'
@@ -253,7 +319,7 @@ renewdata<- data.frame(renewdata, fit = fit)
 nBlock<- nrow(fred)#all data has same number of blocks so any file will do
 nnode<- length(vars)
 amat<- array(0, c(nBlock, nnode, nBlock))
-dim(amat)# makes an 12 x 7 x 12 matrix (12 blocks types and 7 nodes of graphicla model)
+dim(amat)# makes an 12 x 6 x 12 matrix (12 blocks types and 7 nodes of graphicla model)
 
 #only want prediction for k'th individual that contribute to expected
 #fitness, and want to add only seedmass (sm) entries
@@ -267,13 +333,13 @@ foo #yes, only last node is "true"; corresponds to "sm"
 
 #generate predicted valuses using region-specific aout object, with renewdata, and amat format
 pout.amat.gla<- predict(aout.gla, newdata= renewdata, varvar= varb,
-                        idvar= id, root = root, se.fit=TRUE, amat = amat, info.tol = 1e-16)
+                        idvar= id, root = root, se.fit=TRUE, amat = amat, info.tol = 1e-14)
 
 pout.amat.mba<- predict(aout.mba, newdata= renewdata, varvar= varb,
-                    idvar= id, root = root, se.fit=TRUE, amat = amat, info.tol = 1e-16)
+                    idvar= id, root = root, se.fit=TRUE, amat = amat, info.tol = 1e-15)
 
 pout.amat.pra<- predict(aout.pra, newdata= renewdata, varvar= varb,
-                    idvar= id, root = root, se.fit=TRUE, amat = amat, info.tol = 1e-16)
+                    idvar= id, root = root, se.fit=TRUE, amat = amat, info.tol = 1e-15)
 
 #combine estimates with standard error, and then round
 #to three decimal places
@@ -292,29 +358,78 @@ colnames(Region.gla)<- c("Expected Fitness", "SE")
 colnames(Region.mba)<- c("Expected Fitness", "SE")
 colnames(Region.pra)<- c("Expected Fitness", "SE")
 
-round(Region.gla, 3) 
-round(Region.mba, 3) 
-round(Region.pra, 3) 
+Region.gla<-round(Region.gla, 3) 
+Region.mba<- round(Region.mba, 3) 
+Region.pra<-round(Region.pra, 3) 
+
+Region.gla
+Region.mba
+Region.pra
 
 summary(Region.gla)# median = 2.345 corresponds to block 6: 3.027 (1.245)
-summary(Region.mba)# median = 2.50E-10 which is basically zero, so go with smalles non-zero? Block 9 1.6 (2.670)
-summary(Region.pra)# median = 8.055348e-12 (basically zero, as above), so use block 0.061 (0.155)
+summary(Region.mba)# median = 2.50E-10 which is basically zero
+summary(Region.pra)# median = 8.055348e-12 (basically zero, as above)
+
+
 
 ###############################################################################
-#     Generate mean fitness (and stand errors) estimates for Regions 
+#     Generate mean fitness (and stand errors) estimates for 2016 Habitatat Types 
 ###############################################################################
 
 
 # Start with Habitat Type 
-aout<- aster(resp~varb + fit:(Region), pred, fam, varb, id, root, data=redata2016)
+aout<- aster(resp~varb, pred, fam, varb, id, root, data=redata2016, famlist = famlist)
+
+summary(aouta)
+
+aouta<- aster(resp~varb + fit:(HabitatType), pred, fam, varb, id, root, data=redata2016, famlist = famlist)
 
 summary(aout, show.graph = TRUE)
 
-# generate MLE of saturated model mean value parameter vector: mu
-pout<- predict.aster(aout, se.fit=TRUE)
 
-# make up  data for hypothetical individual that meet "typical" criteria:
-# Therefore, "make up" covariate data for hypothetical individuals that are comparable and obtain mean values for them
+aoutb<- aster(resp~varb + fit:(HabitatType + Block.ID), pred, fam, varb, id, root, data=redata2016, famlist = famlist)
+summary(aoutb)
+
+aoutc<- aster(resp~varb + fit:(HabitatType + Block.ID + HabitatType*Block.ID), pred, fam, varb, id, root, data=redata2016, famlist = famlist)
+summary(aoutc, show.graph=T, info.tol = 1e-16)
+
+anova(aout, aouta, aoutb, aoutc)
+
+#Significant interaction between Block and Habitat Type, so split data into Alvar 
+# and prairie datasets and perform separate analyses
+
+#separate data and estimate size parameter of negative binomaial distributions
+# for flower number, fruit number, and seedmass
+
+redata2016.alv<- subset(redata2016, HabitatType=="Alvar")
+redata2016.alv<- droplevels(redata2016.alv)
+
+dat.alv<- subset(dat2, HabitatType=="Alvar")
+alv.flw<- subset(dat.alv, No.Flowers.2016 > 0)
+alv.flw<- alv.flw$No.Flowers.2016
+
+alv.flw.0<-fitdistr(alv.flw, "negative binomial")# size: 1.10997286
+
+alv.frt<- subset(dat.alv, No.Fruit.2016 > 0)
+alv.frt<- alv.frt$No.Fruit.2016
+
+alv.frt.0<-fitdistr(alv.frt, "negative binomial")# size: 3.3698966
+
+alv.sm<- subset(dat.alv, sm >0)
+alv.sm<- alv.sm$sm
+
+alv.sm.0<- fitdistr(alv.sm, "negative binomial")# size: 1.0217064
+
+famlist.alv<- list(fam.bernoulli(), fam.negative.binomial(1.10997286), 
+                   fam.negative.binomial(3.3698966), fam.negative.binomial(1.0217064))
+
+aouta<- aster(resp~varb, pred, fam, varb, id, root, data=redata2016.alv, famlist = famlist.alv)
+summary(aouta)
+
+aout.alv<- aster(resp~varb + fit:(Block.ID), pred, fam, varb, id, root, data=redata2016.alv, famlist = famlist.alv)
+summary(aout, info.tol = 1e-14)
+
+anova(aouta, aout.alv)
 
 # make data.frame of indivudals for each habitat type (Alvar and Prairie)
 
