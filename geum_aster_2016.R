@@ -401,6 +401,7 @@ anova(aout, aouta, aoutb, aoutc)
 #separate data and estimate size parameter of negative binomaial distributions
 # for flower number, fruit number, and seedmass
 
+#Start with Alvars
 redata2016.alv<- subset(redata2016, HabitatType=="Alvar")
 redata2016.alv<- droplevels(redata2016.alv)
 
@@ -431,9 +432,40 @@ summary(aout, info.tol = 1e-14)
 
 anova(aouta, aout.alv)
 
+#Next do Prairie
+redata2016.pra<- subset(redata2016, HabitatType=="Prairie")
+redata2016.pra<- droplevels(redata2016.pra)
+
+dat.pra<- subset(dat2, HabitatType=="Prairie")
+pra.flw<- subset(dat.pra, No.Flowers.2016 > 0)
+pra.flw<- pra.flw$No.Flowers.2016
+
+pra.flw.0<-fitdistr(pra.flw, "negative binomial")# size: 1.8744208
+
+pra.frt<- subset(dat.pra, No.Fruit.2016 > 0)
+pra.frt<- pra.frt$No.Fruit.2016
+
+pra.frt.0<-fitdistr(pra.frt, "negative binomial")# size: 100.0002113
+
+pra.sm<- subset(dat.pra, sm >0)
+pra.sm<- pra.sm$sm
+
+pra.sm.0<- fitdistr(pra.sm, "negative binomial")# size: 1.593404
+
+famlist.pra<- list(fam.bernoulli(), fam.negative.binomial(1.8744208), 
+                   fam.negative.binomial(100.0002113), fam.negative.binomial(1.593404))
+
+aouta<- aster(resp~varb, pred, fam, varb, id, root, data=redata2016.pra, famlist = famlist.pra)
+summary(aouta)
+
+aout.pra<- aster(resp~varb + fit:(Block.ID), pred, fam, varb, id, root, data=redata2016.pra, famlist = famlist.pra)
+summary(aout, info.tol = 1e-14)
+
+anova(aouta, aout.pra)
+
 # make data.frame of indivudals for each habitat type (Alvar and Prairie)
 
-fred <- data.frame(Region=levels(redata2016$Region),
+fred <- data.frame(Block.ID=levels(redata2016$Block.ID),
                    Germination.Y.N=1, Survival.Y.N=1, Flower.Y.N.2016=1, No.Flowers.2016=1,
                    No.Fruit.2016=1, sm=1, root = 1)
 
@@ -456,36 +488,48 @@ renewdata<- data.frame(renewdata, fit = fit)
 
 
 #Generate fintess estimates and standard errors for each block
-nRegion<- nrow(fred)#all data has same number of blocks so any file will do
+nBlock<- nrow(fred)#all data has same number of blocks so any file will do
 nnode<- length(vars)
-amat<- array(0, c(nRegion, nnode, nRegion))
-dim(amat)# makes an 3 x 6 x 3 matrix (2 habitat types and 6 nodes of graphicla model)
+amat<- array(0, c(nBlock, nnode, nBlock))
+dim(amat)# makes an 12 x 6 x 12 matrix (12 blocks and 6 nodes of graphicla model)
 
 #only want means for k'th individual that contribute to expected
 #fitness, and want to add only Seedmass.2016 entries
 
 foo<- grepl("sm", vars)
-for(k in 1:nRegion)
+for(k in 1:nBlock)
   amat[k, foo, k]<- 1
 
 #check
 foo #yes, only last node is "true"; corresponds to Seedmass.2016
 
 #generate predicted valuses using aout object, with renewdata, and amat format
-pout.amat<- predict(aout, newdata= renewdata, varvar= varb,
-                    idvar= id, root = root, se.fit=TRUE, amat = amat)
+pout.amat.alv<- predict(aout.alv, newdata= renewdata, varvar= varb,
+                    idvar= id, root = root, se.fit=TRUE, amat = amat, info.tol = 1e-14)
 
+pout.amat.pra<- predict(aout.pra, newdata= renewdata, varvar= varb,
+                        idvar= id, root = root, se.fit=TRUE, amat = amat, info.tol = 1e-15)
 #combine estimates with standard error, and then round
 #to three decimal places
-RegionType<- cbind(pout.amat$fit, pout.amat$se.fit)
+alv.block<- cbind(pout.amat.alv$fit, pout.amat.alv$se.fit)
+pra.block<- cbind(pout.amat.pra$fit, pout.amat.pra$se.fit)
+
+rownames(alv.block)<- as.character(fred$Block.ID)
+rownames(pra.block)<- as.character(fred$Block.ID)
 
 
-rownames(RegionType)<- as.character(fred$Region)
+colnames(alv.block)<- c("Expected Fitness", "SE")
+colnames(pra.block)<- c("Expected Fitness", "SE")
 
 
-colnames(RegionType)<- c("Expected Fitness", "SE")
+alv.block<- round(alv.block, 3)
+pra.block<- round(pra.block, 3) 
 
-round(RegionType, 3) 
+alv.block
+pra.block
+
+summary(alv.block)#median = 2.345, corresponds with block 8 1.664 (0.699)
+summary(pra.block)#median = 0.000, so keep at zero
 
 ###############################################################################
 #     Generate mean fitness (and stand errors) estimates for Populations 
