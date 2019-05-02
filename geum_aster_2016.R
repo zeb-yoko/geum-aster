@@ -536,16 +536,15 @@ summary(pra.block)#median = 0.000, so keep at zero
 ###############################################################################
 
 
-# Start with Habitat Type 
-aout<- aster(resp~varb + fit:(Population), pred, fam, varb, id, root, data=redata2016)
+aouta<- aster(resp~varb, pred, fam, varb, id, root, data=redata2016, famlist = famlist)
 
-summary(aout, show.graph = TRUE, info.tol = 1e-16)
+aout<- aster(resp~varb + fit:(Population), pred, fam, varb, id, root, data=redata2016, famlist = famlist)
 
-# generate MLE of saturated model mean value parameter vector: mu
-pout<- predict.aster(aout, se.fit=TRUE, info.tol = 1e-16)
+summary(aout, show.graph = TRUE, info.tol = 1e-15)
 
-# make up  data for hypothetical individual that meet "typical" criteria:
-# Therefore, "make up" covariate data for hypothetical individuals that are comparable and obtain mean values for them
+anova(aouta, aout)
+
+#Generate fitness estimates for populations
 
 # make data.frame of indivudals for each habitat type (Alvar and Prairie)
 
@@ -575,7 +574,7 @@ renewdata<- data.frame(renewdata, fit = fit)
 nPop<- nrow(fred)#all data has same number of blocks so any file will do
 nnode<- length(vars)
 amat<- array(0, c(nPop, nnode, nPop))
-dim(amat)# makes an 2 x 6 x 2 matrix (2 habitat types and 6 nodes of graphicla model)
+dim(amat)# makes an 22 x 6 x 22 matrix (2 habitat types and 6 nodes of graphicla model)
 
 #only want means for k'th individual that contribute to expected
 #fitness, and want to add only Seedmass.2016 entries
@@ -589,7 +588,7 @@ foo #yes, only last node is "true"; corresponds to Seedmass.2016
 
 #generate predicted valuses using aout object, with renewdata, and amat format
 pout.amat<- predict(aout, newdata= renewdata, varvar= varb,
-                    idvar= id, root = root, se.fit=TRUE, amat = amat, info.tol = 1e-16)
+                    idvar= id, root = root, se.fit=TRUE, amat = amat, info.tol = 1e-15)
 
 #combine estimates with standard error, and then round
 #to three decimal places
@@ -601,73 +600,8 @@ rownames(pop)<- as.character(fred$Population)
 
 colnames(pop)<- c("Expected Fitness", "SE")
 
-round(pop, 3) 
-write.csv(pop, file="2016pop.csv", quote = F)
+pop<-round(pop, 3) 
 
-###############################################################################
-#     Generate mean fitness (and stand errors) estimates for Family.NonUnique
-###############################################################################
+pop
 
-redata2016$Family.NonUnique<- as.factor(redata2016$Family.NonUnique)
-
-# Start with Habitat Type 
-aout<- aster(resp~varb + fit:(Family.NonUnique), pred, fam, varb, id, root, data=redata2016)
-
-summary(aout, show.graph = TRUE, info.tol = 1e-20)#direction of recession issue
-
-# generate MLE of saturated model mean value parameter vector: mu
-pout<- predict.aster(aout, se.fit=TRUE, info.tol=1e-2000)
-
-# make up  data for hypothetical individual that meet "typical" criteria:
-# Therefore, "make up" covariate data for hypothetical individuals that are comparable and obtain mean values for them
-
-# make data.frame of indivudals for each habitat type (Alvar and Prairie)
-
-fred <- data.frame(Family.NonUnique=levels(redata2016$Family.NonUnique),
-                   Germination.Y.N=1, Survival.Y.N=1, Flower.Y.N.2016=1, No.Flowers.2016=1,
-                   No.Fruit.2016=1, sm=1, root = 1)
-
-# reshape the "made up data" just as the actual data
-renewdata <- reshape(fred, varying = list(vars),
-                     direction = "long", timevar = "varb",
-                     times = as.factor(vars), v.names = "resp")
-
-# make character string from "varb" of renewdata, without actual values (e.g., the layers of varb in renewdata)
-layer<- gsub("[0-9]", "", as.character(renewdata$varb))
-
-# add layer to renewdata
-renewdata<- data.frame(renewdata, layer= layer)
-
-# add Seedmass.2016 in new layer col of renewdata as numeric, called fit
-fit<- as.numeric(layer=="sm")
-
-# add fit to renewdata
-renewdata<- data.frame(renewdata, fit = fit)
-
-
-#Generate fintess estimates and standard errors for each block
-nfam<- nrow(fred)#all data has same number of blocks so any file will do
-nnode<- length(vars)
-amat<- array(0, c(nfam, nnode, nfam))
-dim(amat)# makes an 41 x 6 x 41 matrix (41 family IDs types and 6 nodes of graphicla model)
-
-#only want means for k'th individual that contribute to expected
-#fitness, and want to add only Seedmass.2016 entries
-
-foo<- grepl("sm", vars)
-for(k in 1:nfam)
-  amat[k, foo, k]<- 1
-
-#check
-foo #yes, only last node is "true"; corresponds to Seedmass.2016
-
-#generate predicted valuses using aout object, with renewdata, and amat format
-pout.amat<- predict(aout, newdata= renewdata, varvar= varb,
-                    idvar= id, root = root, se.fit=TRUE, amat = amat, info.tol = 1e-50)
-
-#The above produces an error: "direction of recession -> cannot compute standard error"
-# I will have to look into this.
-
-#For more info on this error, see Charlie's great explaination: http://www.stat.umn.edu/geyer/8931aster/slides/s9.pdf
-
-# and also this posting on the Aster Forum: https://groups.google.com/forum/#!msg/aster-analysis-user-group/oivUr6Q99rE/cxLljfoCfA0J;context-place=forum/aster-analysis-user-group
+##################################################################################
