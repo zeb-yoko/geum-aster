@@ -7,7 +7,13 @@ library(QGglmm)
 ##new package##
 #install.packages("fitdistrplus")
 library(fitdistrplus)
+##NOTE: Distributions were primarily determined in aster-distros script##
 df <- read.csv('NV_CG_Experiment-mg.csv')
+## change to cleaned data from aster model when ready##
+
+###########################################################
+##INDIVIDUAL MODELS PER TRAIT TO CALCULATE HERITABILITIES##
+###########################################################
 
 ##germination##
 ##############################
@@ -24,30 +30,44 @@ f1g <- fitdist(germ$No.Days.to.Germ, "pois")
 plot(f1g)
 summary(f1g)
 ##germination##
+##model statement##
 germ.mod <- glmer(No.Days.to.Germ~Region + (1 | Population) + 
 							(1 | Family.Unique) + (1 | Block.ID), data = df,
 						family=poisson(link=log))
+##View outputs##
 summary(germ.mod)
 hist(residuals(germ.mod))
-##intercept and variance components for QGglmm##
+##pull coefficients: intercept and variance components for QGglmm##
 vars <- as.data.frame(VarCorr(germ.mod))[, c('grp','vcov')]
 intercept <- fixef(germ.mod)['(Intercept)']
+##verify data loaded in to objects##
 vars
+##verify data loaded in to objects##
 intercept
-#latent region mean#
+
+##View latent-scale values region mean##
+##values are for variables from model, not yet converted to observation scale##
+
+##region mean##
 mu <- intercept
+##additive variance NOTE: 4 times value due to half-sibling design##
 va <- 4*vars[vars[["grp"]] == "Family.Unique", "vcov"]
 va
+##total variance in trait##
 vp <- sum(vars[,"vcov"])
 vp
+##Latent-scale narrow-sense heritability##
 lh2 <- va/vp
 lh2
+
+##Run QGparams to convert to observation scale (gives real heritability values)##
 ##put in QGparams##
 herit2 <- QGparams(mu = mu, var.a = va, var.p = vp, model = "Poisson.log")
 ##NOTE: with mu being regional(fixed effect) mean, heritability is calculated as h2 of trait 
-#across all regions, is it worth breaking apart?##
+#across all regions, could be worth breaking apart##
 herit2
-?QGparams
+
+##Create a table to compile heritabilities## 
 col.classes = c("character", "character", "numeric")
 col.names = c("Trait", "Year", "Heritability")
 h2 <-read.table(text = "",colClasses = col.classes, col.names =col.names)
@@ -80,21 +100,34 @@ hist(residuals(TrueLeaf.mod))
 ##intercept and variance components for QGglmm##
 vars <- as.data.frame(VarCorr(TrueLeaf.mod))[, c('grp','vcov')]
 intercept <- fixef(TrueLeaf.mod)['(Intercept)']
+##verify data loaded in to objects##
 vars
+##verify data loaded in to objects##
 intercept
-#latent region mean#
+
+##View latent-scale values region mean##
+##values are for variables from model, not yet converted to observation scale##
+
+##region mean##
 mu <- intercept
+##additive variance NOTE: 4 times value due to half-sibling design##
 va <- 4*vars[vars[["grp"]] == "Family.Unique", "vcov"]
 va
+##total variance in trait##
 vp <- sum(vars[,"vcov"])
 vp
-#latent scale heritability#
+##Latent-scale narrow-sense heritability##
 lh2 <- va/vp
 lh2
+
+##Run QGparams to convert to observation scale (gives real heritability values)##
 ##put in QGparams##
 herit2 <- QGparams(mu = mu, var.a = va, var.p = vp, model = "Poisson.log")
 ##NOTE: with mu being regional(fixed effect) mean, heritability is calculated as h2 of trait 
-#across all regions, is it worth breaking apart?##
+#across all regions, could be worth breaking apart##
+herit2
+##NOTE: with mu being regional(fixed effect) mean, heritability is calculated as h2 of trait 
+#across all regions, could be worth breaking apart?##
 herit2
 h2[2,1] <- "TrueLeaf"
 h2[2,2] <- "2015"
@@ -124,29 +157,42 @@ hist(residuals(dtff.mod))
 ##intercept and variance components for QGglmm##
 vars <- as.data.frame(VarCorr(dtff.mod))[, c('grp','vcov')]
 intercept <- fixef(dtff.mod)['(Intercept)']
+##verify data loaded in to objects##
 vars
+##verify data loaded in to objects##
 intercept
-#latent region mean#
+
+##View latent-scale values region mean##
+##values are for variables from model, not yet converted to observation scale##
+
+##region mean##
 mu <- intercept
-va <-vars[vars[["grp"]] == "Family.Unique", "vcov"]
+##additive variance NOTE: 4 times value due to half-sibling design##
+va <- 4*vars[vars[["grp"]] == "Family.Unique", "vcov"]
 va
+##total variance in trait##
 vp <- sum(vars[,"vcov"])
 vp
-#latent scale heritability#
+##Latent-scale narrow-sense heritability##
 lh2 <- va/vp
 lh2
+
+##Run QGparams to convert to observation scale (gives real heritability values)##
 ##put in QGparams##
 herit2 <- QGparams(mu = mu, var.a = va, var.p = vp, model = "Poisson.log")
 ##NOTE: with mu being regional(fixed effect) mean, heritability is calculated as h2 of trait 
-#across all regions, is it worth breaking apart?##
+#across all regions, could be worth breaking apart##
 herit2
-##NOTE--BASICALLY ZERO BECAUSE MODEL EXPLAINS ESSENTIALLY NOTHING##
+
+##run rptPoisson to see how much variance explained by effects##
 library(rptR)
 rpt.dtff<-rptPoisson(formula = no.Planting.to.DTFF~Region + (1 | Population) + 
 							(1 | Family.Unique) + (1 | Block.ID), 
 							grname = c("Fixed", "Block.ID", "Population", "Family.Unique"),
 							data = flr.16, link = "log", nboot =0, ratio =T, adjusted =F)
 rpt.dtff
+##NOTE--BASICALLY ZERO BECAUSE MODEL EXPLAINS ESSENTIALLY NOTHING##
+
 h2[3,1] <- "Date to first flower"
 h2[3,2] <- "2016"
 h2[3,3] <- 0
@@ -162,28 +208,41 @@ hist(residuals(n.flr.mod))
 
 vars <- as.data.frame(VarCorr(n.flr.mod))[, c('grp','vcov')]
 intercept <- fixef(n.flr.mod)['(Intercept)']
+##verify data loaded in to objects##
 vars
+##verify data loaded in to objects##
 intercept
-#latent region mean#
+
+##View latent-scale values region mean##
+##values are for variables from model, not yet converted to observation scale##
+
+##region mean##
 mu <- intercept
+##additive variance NOTE: 4 times value due to half-sibling design##
 va <- 4*vars[vars[["grp"]] == "Family.Unique", "vcov"]
 va
+##total variance in trait##
 vp <- sum(vars[,"vcov"])
 vp
-#latent scale heritability#
+##Latent-scale narrow-sense heritability##
 lh2 <- va/vp
 lh2
+
+##Run QGparams to convert to observation scale (gives real heritability values)##
 ##put in QGparams##
 herit2 <- QGparams(mu = mu, var.a = va, var.p = vp, model = "Poisson.log")
 ##NOTE: with mu being regional(fixed effect) mean, heritability is calculated as h2 of trait 
-#across all regions, is it worth breaking apart?##
+#across all regions, could be worth breaking apart##
 herit2
-rpt.dtff<-rptPoisson(formula = No.Flowers.2016~Region + (1 | Population) + 
+
+##Run rptPoisson to see how much variance explained by model effects##
+rpt.nflr<-rptPoisson(formula = No.Flowers.2016~Region + (1 | Population) + 
 								(1 | Family.Unique) + (1 | Block.ID), 
 							grname = c("Fixed", "Block.ID", "Population", "Family.Unique"),
 							data = flr.16, link = "log", nboot =0, ratio =T, adjusted =F)
-rpt.dtff
+rpt.nflr
 ##NOTE--BASICALLY ZERO BECAUSE MODEL EXPLAINS ESSENTIALLY NOTHING##
+
 h2[4,1] <- "Number of Flowers"
 h2[4,2] <- "2016"
 h2[4,3] <- 0
@@ -204,27 +263,43 @@ n.fruit.out <-	summary(n.fruit.mod)
 n.fruit.out
 #store residuals
 n.fruit.resid <- residuals(n.fruit.mod)
-rpt.dtff<-rptPoisson(formula = No.Fruit.2016~Region + (1 | Population) + 
+
+vars <- as.data.frame(VarCorr(n.fruit.mod))[, c('grp','vcov')]
+intercept <- fixef(n.fruit.mod)['(Intercept)']
+
+##verify data loaded in to objects##
+vars
+##verify data loaded in to objects##
+intercept
+
+##View latent-scale values region mean##
+##values are for variables from model, not yet converted to observation scale##
+
+##region mean##
+mu <- intercept
+##additive variance NOTE: 4 times value due to half-sibling design##
+va <- 4*vars[vars[["grp"]] == "Family.Unique", "vcov"]
+va
+##total variance in trait##
+vp <- sum(vars[,"vcov"])
+vp
+##Latent-scale narrow-sense heritability##
+lh2 <- va/vp
+lh2
+
+##Run QGparams to convert to observation scale (gives real heritability values)##
+##put in QGparams##
+herit2 <- QGparams(mu = mu, var.a = va, var.p = vp, model = "Poisson.log")
+##NOTE: with mu being regional(fixed effect) mean, heritability is calculated as h2 of trait 
+#across all regions, could be worth breaking apart##
+herit2
+
+rpt.nfruit<-rptPoisson(formula = No.Fruit.2016~Region + (1 | Population) + 
 								(1 | Family.Unique) + (1 | Block.ID), 
 							grname = c("Fixed", "Block.ID", "Population", "Family.Unique"),
 							data = flr.16, link = "log", nboot =0, ratio =T, adjusted =F)
-rpt.dtff
-vars <- as.data.frame(VarCorr(n.fruit.mod))[, c('grp','vcov')]
-intercept <- fixef(n.fruit.mod)['(Intercept)']
-vars
-intercept
-#latent region mean#
-mu <- intercept
-va <- 4*vars[vars[["grp"]] == "Family.Unique", "vcov"]
-va
-vp <- sum(vars[,"vcov"])
-vp
-#latent scale heritability#
-lh2 <- va/vp
-lh2
-##put in QGparams##
-herit2 <- QGparams(mu = mu, var.a = va, var.p = vp, model = "Poisson.log")
-herit2
+rpt.nfruit
+
 ##add to table
 h2[5,1] <- "Number of Fruit"
 h2[5,2] <- "2016"
@@ -254,17 +329,21 @@ vars <- as.data.frame(VarCorr(n.seed.mod))[, c('grp','vcov')]
 intercept <- fixef(n.seed.mod)['(Intercept)']
 vars
 intercept
+##Negative binomial needs additional (dispersion) parameter, theta##
 theta <- 1.5239
-#latent region mean#
+##latent region mean##
 mu <- intercept
+##Additive Variance--note 4x for half-sib design##
 va <- 4*vars[vars[["grp"]] == "Family.Unique", "vcov"]
 va
+##Total variance##
 vp <- sum(vars[,"vcov"])
 vp
-#latent scale heritability#
+##latent scale narrow-sense heritability##
 lh2 <- va/vp
 lh2
-##put in QGparams##
+
+##put in QGparams--get observed scale h2##
 herit2 <- QGparams(mu = mu, var.a = va, var.p = vp, theta = theta, model = "negbin.log")
 herit2
 ##add to table
@@ -317,7 +396,7 @@ f1g <- fitdist(flr17$DtB.O.Day.2017, "norm")
 f2g <- fitdist(flr17$DtB.O.Day.2017, "pois")
 plot(f1g)
 plot(f2g)
-##model##
+##model statement##
 dtb.mod<- glmer(DtB.O.Day.2017~Region + (1 | Population) + 
 					 	(1 | Family.Unique) + (1 | Block.ID), data = flr.17,
 					 ##first day = ~114
@@ -330,20 +409,33 @@ rpt.dtb<-rpt(formula = DtB.O.Day.2017~Region + (1 | Population) +
 rpt.dtb
 vars <- as.data.frame(VarCorr(dtb.mod))[, c('grp','vcov')]
 intercept <- fixef(dtb.mod)['(Intercept)']
+##verify data loaded in to objects##
 vars
+##verify data loaded in to objects##
 intercept
-#latent region mean#
+
+##View latent-scale values region mean##
+##values are for variables from model, not yet converted to observation scale##
+
+##region mean##
 mu <- intercept
+##additive variance NOTE: 4 times value due to half-sibling design##
 va <- 4*vars[vars[["grp"]] == "Family.Unique", "vcov"]
 va
+##total variance in trait##
 vp <- sum(vars[,"vcov"])
 vp
-#latent scale heritability#
+##Latent-scale narrow-sense heritability##
 lh2 <- va/vp
 lh2
+
+##Run QGparams to convert to observation scale (gives real heritability values)##
 ##put in QGparams##
 herit2 <- QGparams(mu = mu, var.a = va, var.p = vp, theta = theta, model = "negbin.log")
+##NOTE: with mu being regional(fixed effect) mean, heritability is calculated as h2 of trait 
+#across all regions, could be worth breaking apart##
 herit2
+
 ##add to table
 h2[8,1] <- "Date to bolt"
 h2[8,2] <- "2017"
@@ -372,20 +464,33 @@ rpt.dtfr<-rptPoisson(formula = Fruit.O.Day.2017~Region + (1 | Population) +
 rpt.dtfr
 vars <- as.data.frame(VarCorr(dtfr.mod))[, c('grp','vcov')]
 intercept <- fixef(dtfr.mod)['(Intercept)']
+##verify data loaded in to objects##
 vars
+##verify data loaded in to objects##
 intercept
-#latent region mean#
+
+##View latent-scale values region mean##
+##values are for variables from model, not yet converted to observation scale##
+
+##region mean##
 mu <- intercept
+##additive variance NOTE: 4 times value due to half-sibling design##
 va <- 4*vars[vars[["grp"]] == "Family.Unique", "vcov"]
 va
+##total variance in trait##
 vp <- sum(vars[,"vcov"])
 vp
-#latent scale heritability#
+##Latent-scale narrow-sense heritability##
 lh2 <- va/vp
 lh2
+
+##Run QGparams to convert to observation scale (gives real heritability values)##
 ##put in QGparams##
-herit2 <- QGparams(mu = mu, var.a = va, var.p = vp,  model = "Poisson.log")
+herit2 <- QGparams(mu = mu, var.a = va, var.p = vp, model = "Poisson.log")
+##NOTE: with mu being regional(fixed effect) mean, heritability is calculated as h2 of trait 
+#across all regions, could be worth breaking apart##
 herit2
+
 ##add to table
 h2[9,1] <- "Date to fruit"
 h2[9,2] <- "2017"
@@ -418,24 +523,29 @@ rpt.seed17<-rpt(formula = DtB.O.Day.2017~Region + (1 | Population) +
 				 grname = c("Fixed", "Block.ID", "Population", "Family.Unique"),
 				 data = flr17,  datatype = "nbinom", link = "log", nboot =0, ratio =T, adjusted =F)
 rpt.seed17
-?rptR
+##pull data from model##
 vars <- as.data.frame(VarCorr(seed17.mod))[, c('grp','vcov')]
 intercept <- fixef(seed17.mod)['(Intercept)']
 vars
 intercept
+##additonal negative binomial parameter##
 theta <- 1.347
-#latent region mean#
+
+##latent region mean##
 mu <- intercept
 va <- 4*vars[vars[["grp"]] == "Family.Unique", "vcov"]
 va
 vp <- sum(vars[,"vcov"])
 vp
-#latent scale heritability#
+
+##latent scale heritability##
 lh2 <- va/vp
 lh2
-##put in QGparams##
+
+##put in QGparams--get observed scale h2##
 herit2 <- QGparams(mu = mu, var.a = va, var.p = vp, theta = theta, model = "negbin.log")
 herit2
+
 ##add to table
 h2[10,1] <- "Seedmass (mg)"
 h2[10,2] <- "2017"
@@ -456,6 +566,7 @@ f2g <- fitdist(flr18$DTFF.18.Oday, "pois")
 plot(f1g)
 plot(f2g)
 
+##model statement##
 dtff18.mod<- glmer(DTFF.18.Oday~Region + (1 | Population) + 
 						 	(1 | Family.Unique) + (1 | Block.ID), data = flr.18,
 						 family = poisson(link = log))
@@ -463,20 +574,34 @@ summary(dtff18.mod)
 hist(residuals(dtff18.mod))
 vars <- as.data.frame(VarCorr(dtff18.mod))[, c('grp','vcov')]
 intercept <- fixef(dtff18.mod)['(Intercept)']
+
+##verify data loaded in to objects##
 vars
+##verify data loaded in to objects##
 intercept
-#latent region mean#
+
+##View latent-scale values region mean##
+##values are for variables from model, not yet converted to observation scale##
+
+##region mean##
 mu <- intercept
+##additive variance NOTE: 4 times value due to half-sibling design##
 va <- 4*vars[vars[["grp"]] == "Family.Unique", "vcov"]
 va
+##total variance in trait##
 vp <- sum(vars[,"vcov"])
 vp
-#latent scale heritability#
+##Latent-scale narrow-sense heritability##
 lh2 <- va/vp
 lh2
+
+##Run QGparams to convert to observation scale (gives real heritability values)##
 ##put in QGparams##
-herit2 <- QGparams(mu = mu, var.a = va, var.p = vp,  model = "Poisson.log")
+herit2 <- QGparams(mu = mu, var.a = va, var.p = vp, model = "Poisson.log")
+##NOTE: with mu being regional(fixed effect) mean, heritability is calculated as h2 of trait 
+#across all regions, could be worth breaking apart##
 herit2
+
 ##add to table
 h2[11,1] <- "Date to first flower"
 h2[11,2] <- "2018"
@@ -492,7 +617,7 @@ flr18 <- flr.18[!is.na(flr.18$DtB.Oday.2018),]
 f1g <- fitdist(flr18$DtB.Oday.2018, "norm")
 f2g <- fitdist(flr18$DtB.Oday.2018, "pois")
 
-##Roughly normal-NOT poisson##
+##Roughly normal? OR poisson??##
 dtb18.mod<- glmer(DtB.Oday.2018~Region + (1 | Population) + 
 							(1 | Family.Unique) + (1 | Block.ID), data = flr18,
 						##went with (neg) Gamma dist
