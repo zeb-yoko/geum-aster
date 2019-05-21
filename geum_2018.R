@@ -3,15 +3,17 @@
 setwd("C:/Users/Mason Kulbaba/Dropbox/Rscripts/aster-analysis/")
 
 #load data
-dat2<- read.csv("NV_CG_Experiment2wdist2.csv")
+dat<- read.csv("NV_CG_Experiment2wdist2.csv")
 
 
 #subset data for 2017 analysis
-#dat2<- dat[c("Family.Unique",   "Block.ID", "HabitatType", "Region", "Population",
- #            "Germination.Y.N","Survival.Y.N","Survival.Y.N.2017", "Flower.Y.N.2016",
-  #           "Flower.Y.N.2017","No.Flowers.2016","Total.Flowers.2017", "Fruit.Y.N.2016",
-   #          "Fruit.Y.N.2017", "No.Fruit.2016","No.Fruit.2017", "sm", "sm.2")]
-
+dat2<- dat[c("Family.Unique",   "Block.ID", "HabitatType", "Region", "Population",
+                          "Dist.from.cg.km","Germination.Y.N","Survival.Y.N","Survival.Y.N.2017", 
+                          "Flower.Y.N.2016","Flower.Y.N.2017","No.Flowers.2016","Total.Flowers.2017",
+                          "Fruit.Y.N.2016","Fruit.Y.N.2017", "No.Fruit.2016","No.Fruit.2017",
+                          "sm", "sm.2", "Flowering.Y.N.2018",
+             "Total.Flowers.2018", "Fruit.Y.N.2018", 
+             "No.Fruit.2018", "seedmass.2018.g." )]
 
 
 
@@ -117,7 +119,7 @@ dat2$Surv2017[dat2$Flower.Y.N.2017==1]=1
 
 dat2$Surv2017[is.na(dat2$Surv2017)] <- 0
 
-######################################################################################
+###################################################################################
 # Now begin cleaning the 2018 data
 
 
@@ -134,7 +136,7 @@ subset(dat2, Survival.Y.N.2018==1 & Survival.Y.N==0)#  errors
 #flower in 2018 but no survival
 subset(dat2, Flowering.Y.N.2018==1 & Survival.Y.N.2018==0)# 7 errors
 
-#fix above errors
+ #fix above errors
 dat2$Survival.Y.N.2018[dat2$Flowering.Y.N.2018==1 & dat2$Survival.Y.N.2018==0]=1
 
 #flowering =0, but total flowers >0
@@ -257,6 +259,26 @@ subset(dat2, Flowering.Y.N.2018==1 & Surv2018==0)# 0 errors
 
 subset(dat2, Fruit.Y.N.2018==1 & Total.Flowers.2018==0)# 0 errors
 
+#conver seedmass.g to seedmass in mg
+
+dat2$sm.3<- round((dat2$seedmass.2018.g. * 1000), 0)
+
+
+
+#combine all three years of seed mass weights for total lifetime seedmass (2016 - 2018)
+dat2$sm<- as.numeric(dat2$sm)
+
+#sum of 2016 and 2017 seed weight
+dat2$sm2017<- (dat2$sm + dat3$sm.2)
+
+#sum of all three years of seed weight
+dat2$sm2018<- (dat2$sm2017 + dat2$sm.3)
+
+
+#Write final cleaned data file for only
+write.table(dat2, "C:/Users/Mason Kulbaba/Dropbox/git/geum-aster/cleaned_data_for_aster.csv", sep=",", row.names = F, quote = F )
+
+
 
 #That should conclude the data cleaning.
 
@@ -269,12 +291,11 @@ dat3<- dat2[c("Family.Unique","Block.ID", "HabitatType", "Region", "Population",
 
 #write.table(dat3, file="dat3_2018.csv", sep=",", row.names = F, quote = F)
 
-#conver seedmass.g to seedmass in mg
 
-dat3$sm3<- round((dat3$seedmass.2018.g. * 1000), 0)
 
-#combine all three years of seed mass weights for total lifetime seedmass (2016 - 2018)
-dat3$sm2018<- dat2$sm + dat3$sm.2 + dat3$sm3
+
+
+
 
 
 #set response variables -> these represent variables in graphical model
@@ -337,9 +358,9 @@ summary(aouta, show.graph=TRUE,info.tol = 1e-14)
 
 
 
-aout<- aster(resp~varb + fit:(Region), pred, fam, varb, id, root, data=redata)
+aout<- aster(resp~varb + fit:(Region), pred, fam, varb, id, root, data=redata, method='nlm')
 
-summary(aout, show.graph=TRUE, info.tol = 1e-11)
+summary(aout, show.graph=TRUE, info.tol = 1e-16)
 
 anova(aouta, aout)
 
