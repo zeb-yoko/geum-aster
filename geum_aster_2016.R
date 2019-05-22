@@ -3,58 +3,19 @@
 # and populaitons over three years
 
 
-setwd("C:/Users/Mason Kulbaba/Dropbox/Rscripts/aster-analysis/")
+setwd("C:/Users/Mason Kulbaba/Dropbox/git/geum-aster")
 
 #load data
-dat<- read.csv("NV_CG_Experiment2.csv")
+#dat<- read.csv("NV_CG_Experiment2.csv")
 
+dat<- read.csv("cleaned_data_for_aster.csv")
 
 #subset data for 2016 analysis
-dat2<- dat[c("Family.NonUnique", "Family.Unique",   "Block.ID", "HabitatType", "Region", "Population", "Germination.Y.N","Survival.Y.N", "Flower.Y.N.2016", "No.Flowers.2016", "Fruit.Y.N.2016", "No.Fruit.2016", "sm")]
-
-#replace NA with zero
-dat2[is.na(dat2)] <- 0
-
-
-#The below conversion of seedmass from g -> mg has been done in the excel file,
-# to avoid a formatting issue that fouling later aster analyses. New variable "sm"
-# is seed mass for 2016 plants in milligrams
-
-#Aster can't handle decimal data
-#Conver seedmass from g to mg by " x 1000"
-#dat2$Sm.2016mg<- (dat2$Seedmass.2016 * 1000)
+dat2<- dat[c( "Family.Unique",   "Block.ID", "HabitatType",
+             "Region", "Population", "Germination.Y.N","Survival.Y.N", "Flower.Y.N.2016",
+             "No.Flowers.2016", "Fruit.Y.N.2016", "No.Fruit.2016", "sm")]
 
 
-#Note: found error when plant produced 1 fruit, but data has "0" for flower number
-subset(dat2, No.Flowers.2016==0 & Fruit.Y.N.2016==1)#individual 890
-
-# Replace with flower number =1 for this case
-dat2$No.Flowers.2016[dat2$Flower.Y.N.2016==1&dat2$Fruit.Y.N.2016==1]= 1
-
-#check
-subset(dat2, No.Flowers.2016==0 & Fruit.Y.N.2016==1) #error corrected
-
-#Additional Errors
-
-#Flower.Y.N.2016 = 0 but No.Flowers.2016 > 0?
-subset(dat2, Flower.Y.N.2016==0 & No.Flowers.2016 >0)# 8 erros
-
-#correct
-dat2$Flower.Y.N.2016[dat2$Survival.Y.N==1 & dat2$No.Flowers.2016 >0]=1
-
-#check correction
-subset(dat2, Flower.Y.N.2016==0 & No.Flowers.2016 >0)# erros corrected
-
-#Third error: survival =0, but Flower.y.N.2016 ==1
-subset(dat2, Survival.Y.N==0 & Flower.Y.N.2016==1 )#10 errors
-
-#correct
-dat2$Survival.Y.N[dat2$Germination.Y.N==1 & dat2$Flower.Y.N.2016==1]=1
-
-#check correction
-subset(dat2, Survival.Y.N==0 & Flower.Y.N.2016==1 )# errors corrected
-
-#dat2$Seedmass.2016<- as.integer(dat2$Seedmass.2016)
 
 #set response variables -> these represent variables in graphical model
 vars<- c("Germination.Y.N","Survival.Y.N", "Flower.Y.N.2016", "No.Flowers.2016", "No.Fruit.2016", "sm")
