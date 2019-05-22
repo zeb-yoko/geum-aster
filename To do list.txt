@@ -1,9 +1,6 @@
 Things to do with Geum aster analyses
 
-1. Refine graphical models. How "far back" do you want to go?
 
-2. After (1) is settled, refine distributions (e.g., negative binomial (size=custom) for seedmass).
+1. Figures
 
-3. Model selection - what is important to you?
-
-4. Figures
+2. Mason -> convert NAs to 0 (zero) for only columns that rep. nodes in aster models to preserve NAs in other columns.

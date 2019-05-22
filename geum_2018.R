@@ -3,15 +3,17 @@
 setwd("C:/Users/Mason Kulbaba/Dropbox/Rscripts/aster-analysis/")
 
 #load data
-dat2<- read.csv("NV_CG_Experiment2wdist2.csv")
+dat<- read.csv("NV_CG_Experiment2wdist2.csv")
 
 
 #subset data for 2017 analysis
-#dat2<- dat[c("Family.Unique",   "Block.ID", "HabitatType", "Region", "Population",
- #            "Germination.Y.N","Survival.Y.N","Survival.Y.N.2017", "Flower.Y.N.2016",
-  #           "Flower.Y.N.2017","No.Flowers.2016","Total.Flowers.2017", "Fruit.Y.N.2016",
-   #          "Fruit.Y.N.2017", "No.Fruit.2016","No.Fruit.2017", "sm", "sm.2")]
-
+dat2<- dat[c("Family.Unique",   "Block.ID", "HabitatType", "Region", "Population",
+                          "Dist.from.cg.km","Germination.Y.N","Survival.Y.N","Survival.Y.N.2017", 
+                          "Flower.Y.N.2016","Flower.Y.N.2017","No.Flowers.2016","Total.Flowers.2017",
+                          "Fruit.Y.N.2016","Fruit.Y.N.2017", "No.Fruit.2016","No.Fruit.2017",
+                          "sm", "sm.2", "Flowering.Y.N.2018",
+             "Total.Flowers.2018", "Fruit.Y.N.2018", 
+             "No.Fruit.2018", "seedmass.2018.g." )]
 
 
 
@@ -117,48 +119,115 @@ dat2$Surv2017[dat2$Flower.Y.N.2017==1]=1
 
 dat2$Surv2017[is.na(dat2$Surv2017)] <- 0
 
-######################################################################################
+###################################################################################
 # Now begin cleaning the 2018 data
 
 
 #survival to 2018 but not 2017
-subset(dat2, Survival.Y.N.2018==1 & Survival.Y.N.2017==0)# no errors
+subset(dat2, Survival.Y.N.2018==1 & Surv2017==0)# 29 errors
+
+#correct above errors
+dat2$Surv2017[dat2$Survival.Y.N.2018==1 & dat2$Surv2017==0]=1
+
 
 #survival to 2018 but not from greenhouse
-subset(dat2, Survival.Y.N.2018==1 & Survival.Y.N==0)# 7 errors
-
-#fix above errors
-dat2$Survival.Y.N[dat2$Survival.Y.N.2018==1 & dat2$Survival.Y.N==0]=1
+subset(dat2, Survival.Y.N.2018==1 & Survival.Y.N==0)#  errors
 
 #flower in 2018 but no survival
 subset(dat2, Flowering.Y.N.2018==1 & Survival.Y.N.2018==0)# 7 errors
 
-#fix above errors
+ #fix above errors
 dat2$Survival.Y.N.2018[dat2$Flowering.Y.N.2018==1 & dat2$Survival.Y.N.2018==0]=1
 
 #flowering =0, but total flowers >0
 subset(dat2, Flowering.Y.N.2018==0 & Total.Flowers.2018 > 0)# 6 errors
 
 #fix above errors
-dat2$Flowering.Y.N.2018[dat2$Flowering.Y.N.2018==0 & dat2$Total.Flowers.2018 > 0]=1
+#individual corrections confirmed by Zeb 05/02/2019
+dat2$Flowering.Y.N.2018[dat2$Family.Unique=="AB-LL_10" & dat2$Block.ID==12]=0
+dat2$Total.Flowers.2018[dat2$Family.Unique=="AB-LL_10" & dat2$Block.ID==12]=0
+dat2$seedmass.2018.g.[dat2$Family.Unique=="AB-LL_10" & dat2$Block.ID==12]=0
+
+dat2$ Flowering.Y.N.2018[dat2$Family.Unique=="MAN-KIP_15" & dat2$Block.ID==7]=0
+dat2$Total.Flowers.2018[dat2$Family.Unique=="MAN-KIP_15" & dat2$Block.ID==7]=0
+dat2$seedmass.2018.g.[dat2$Family.Unique=="MAN-KIP_15" & dat2$Block.ID==7]=0
+
+dat2$Flowering.Y.N.2018[dat2$Family.Unique=="MB-MR_13" & dat2$Block.ID==1]=0
+dat2$Total.Flowers.2018[dat2$Family.Unique=="MB-MR_13" & dat2$Block.ID==1]=0
+dat2$seedmass.2018.g.[dat2$Family.Unique=="MB-MR_13" & dat2$Block.ID==1]=0
+
+dat2$Flowering.Y.N.2018[dat2$Family.Unique=="MB-MR_38" & dat2$Block.ID==1]=0
+dat2$Total.Flowers.2018[dat2$Family.Unique=="MB-MR_38" & dat2$Block.ID==1]=0
+
+dat2$Flowering.Y.N.2018[dat2$Family.Unique=="NAP-ASS_6" & dat2$Block.ID==9]=1
+
+dat2$Flowering.Y.N.2018[dat2$Family.Unique=="SD-MUD_18" & dat2$Block.ID==6]=1
+
+
 
 #no flowers produced but fruit set=1
 subset(dat2, Fruit.Y.N.2018==1 & Total.Flowers.2018==0)#6 errors
+########################
+########################
 
-#correct above errors (make fruit y.n. =0)
-dat2$Fruit.Y.N.2018[dat2$Fruit.Y.N.2018==1 & dat2$Total.Flowers.2018==0]=0
+
+#correct above errors
+
+#individual corrections confirmed by Zeb 05/02/2019
+dat2$Total.Flowers.2018[dat2$Family.Unique=="AB-LL_40" & dat2$Block.ID==1]=2
+dat2$No.Fruit.2018[dat2$Family.Unique=="AB-LL_40" & dat2$Block.ID==1]=2
+dat2$seedmass.2018.g.[dat2$Family.Unique=="AB-LL_40" & dat2$Block.ID==1]=0.1372
+
+dat2$Total.Flowers.2018[dat2$Family.Unique=="CAR-PSR_14" & dat2$Block.ID==12]=1
+dat2$No.Fruit.2018[dat2$Family.Unique=="CAR-PSR_14" & dat2$Block.ID==12]=1
+dat2$seedmass.2018.g.[dat2$Family.Unique=="CAR-PSR_14" & dat2$Block.ID==12]=0.0563
+
+dat2$No.Fruit.2018[dat2$Family.Unique=="MB-CRN_2" & dat2$Block.ID==12]=0
+dat2$seedmass.2018.g.[dat2$Family.Unique=="MB-CRN_2" & dat2$Block.ID==12]=0
+
+dat2$Total.Flowers.2018[dat2$Family.Unique=="MB-CRN_21" & dat2$Block.ID==9]=2
+dat2$No.Fruit.2018[dat2$Family.Unique=="MB-CRN_21" & dat2$Block.ID==9]=2
+dat2$seedmass.2018.g.[dat2$Family.Unique=="MB-CRN_21" & dat2$Block.ID==9]=0.1306
+
+dat2$Total.Flowers.2018[dat2$Family.Unique=="MB-CRN_29" & dat2$Block.ID==5]=5
+dat2$No.Fruit.2018[dat2$Family.Unique=="MB-CRN_29" & dat2$Block.ID==5]=5
+dat2$seedmass.2018.g.[dat2$Family.Unique=="MB-CRN_29" & dat2$Block.ID==5]=0.2158
+
+dat2$ Fruit.Y.N.2018[dat2$Family.Unique=="MB-CRN_2" & dat2$Block.ID==10]=0
+
+dat2$ Fruit.Y.N.2018[dat2$Family.Unique=="MB-CRN_17" & dat2$Block.ID==11]=0
+
+dat2$Total.Flowers.2018[dat2$Family.Unique=="MB-MR_40" & dat2$Block.ID==12]=1
+dat2$No.Fruit.2018[dat2$Family.Unique=="MB-MR_40" & dat2$Block.ID==12]=1
+dat2$seedmass.2018.g.[dat2$Family.Unique=="MB-MR_40" & dat2$Block.ID==12]=0.0595
+
+dat2$Total.Flowers.2018[dat2$Family.Unique=="AB-LL_10" & dat2$Block.ID==12]=0
+dat2$No.Fruit.2018[dat2$Family.Unique=="AB-LL_10" & dat2$Block.ID==12]=0
+dat2$seedmass.2018.g.[dat2$Family.Unique=="AB-LL_10" & dat2$Block.ID==12]=0
 
 #Number of fruits > 0, but fruit y.n.=0
 subset(dat2, Fruit.Y.N.2018==0 & No.Fruit.2018 >0)#22 errors
 
 #fix above errors
+
+#individual correction confirmed by zeb 05/02/2019
+dat2$Fruit.Y.N.2018[dat2$Family.Unique=="MB-MR_13" & dat2$Block.ID==1]=0
+dat2$No.Fruit.2018[dat2$Family.Unique=="MB-MR_13" & dat2$Block.ID==1]=0
+
+#fix remaining errors (fruit.y.n=1)
 dat2$Fruit.Y.N.2018[dat2$Fruit.Y.N.2018==0 & dat2$No.Fruit.2018 >0]=1
+
 
 #seed mass >0, but fruit number =0
 subset(dat2, seedmass.2018.g. >0 & No.Fruit.2018==0)# 2 errors
 
-#fix above errors, make fruit number =1
-dat2$No.Fruit.2018[dat2$seedmass.2018.g. >0 & dat2$No.Fruit.2018==0]=1
+###########################
+#temp. removal############
+##########################
+
+dat3<-dat2[!(dat2$seedmass.2018.g. >0 & dat2$No.Fruit.2018==0),]
+
+dat2<-dat3
 
 #Recheck for flower2018=1 but survival=0 for introduced errors
 subset(dat2, Flowering.Y.N.2018==1 & Survival.Y.N.2018==0)# 3 new errors
@@ -166,24 +235,71 @@ subset(dat2, Flowering.Y.N.2018==1 & Survival.Y.N.2018==0)# 3 new errors
 #fix above errors
 dat2$Survival.Y.N.2018[dat2$Flowering.Y.N.2018==1 & dat2$Survival.Y.N.2018==0]=1
 
+
+#survival from 2017 (over winter) to 2018
+dat2$Surv2018[dat2$Flowering.Y.N.2018==1]=1
+
+dat2$Surv2018[is.na(dat2$Surv2018)] <- 0
+
+#check for Surv2018 errors
+subset(dat2, Surv2018==1 & Survival.Y.N==0)
+
+subset(dat2, Survival.Y.N==1 & Germination.Y.N==0)
+
+subset(dat2, Flowering.Y.N.2018==1 & Surv2018==0)
+
+subset(dat2, Fruit.Y.N.2018==1 & Total.Flowers.2018 == 0)
+#######################################################################################
+
+subset(dat2, Survival.Y.N==1 & Germination.Y.N==0)# 0 errors
+
+subset(dat2, Surv2018==1 & Survival.Y.N==0)# 0 errors
+
+subset(dat2, Flowering.Y.N.2018==1 & Surv2018==0)# 0 errors
+
+subset(dat2, Fruit.Y.N.2018==1 & Total.Flowers.2018==0)# 0 errors
+
+#conver seedmass.g to seedmass in mg
+
+dat2$sm.3<- round((dat2$seedmass.2018.g. * 1000), 0)
+
+
+
+#combine all three years of seed mass weights for total lifetime seedmass (2016 - 2018)
+dat2$sm<- as.numeric(dat2$sm)
+
+#sum of 2016 and 2017 seed weight
+dat2$sm2017<- (dat2$sm + dat3$sm.2)
+
+#sum of all three years of seed weight
+dat2$sm2018<- (dat2$sm2017 + dat2$sm.3)
+
+
+#Write final cleaned data file for only
+write.table(dat2, "C:/Users/Mason Kulbaba/Dropbox/git/geum-aster/cleaned_data_for_aster.csv", sep=",", row.names = F, quote = F )
+
+
+
 #That should conclude the data cleaning.
 
 #subset what's needed for 2018 analysis
 
 dat3<- dat2[c("Family.Unique","Block.ID", "HabitatType", "Region", "Population",
-              "Germination.Y.N","Survival.Y.N", "Survival.Y.N.2018", "Flowering.Y.N.2018",
-              "Total.Flowers.2018", "Fruit.Y.N.2018", "No.Fruit.2018", "seedmass.2018.g."  )]
+              "Germination.Y.N","Survival.Y.N", "Surv2018", "Flowering.Y.N.2018",
+              "Total.Flowers.2018", "Fruit.Y.N.2018", "No.Fruit.2018","sm", "sm.2", "seedmass.2018.g."  )]
 
 
 #write.table(dat3, file="dat3_2018.csv", sep=",", row.names = F, quote = F)
 
-#conver seedmass.g to seedmass in mg
 
-dat3$sm3<- round((dat3$seedmass.2018.g. * 1000), 0)
+
+
+
+
 
 
 #set response variables -> these represent variables in graphical model
-vars<- c( "Germination.Y.N","Survival.Y.N", "Survival.Y.N.2018", "Flowering.Y.N.2018",
+vars<- c( "Germination.Y.N","Survival.Y.N", "Surv2018", "Flowering.Y.N.2018",
           "Total.Flowers.2018", "Fruit.Y.N.2018", "No.Fruit.2018", "sm3")
 
 
@@ -221,27 +337,41 @@ fam<- c(1,1,1,1,2,1,2,2) #might want to play with these distributions, especiall
 #describe dist. of preds.
 sapply(fam.default(), as.character)[fam]
 
-layer <- gsub("[0-9]", "", as.character(redata$varb))
-unique(layer)
+#Designation of fitness variable for 2016 data
+fit <- grepl("sm3", as.character(redata$varb))
+fit<- as.numeric(fit)
 
-redata <- data.frame(redata, layer = layer)
-with(redata, class(layer))
+redata$fit <- fit
 
-aouta<- aster(resp~varb, pred, fam, varb, id, root, data=redata, method = 'nlm')
+#check
+with(redata, sort(unique(as.character(varb)[fit == 0])))
+with(redata, sort(unique(as.character(varb)[fit == 1])))
 
-summary(aouta, show.graph=TRUE,info.tol = 1e-10)
 
-aout<- aster(resp~varb + fit:(Block.ID + Region), pred, fam, varb, id, root, data=redata,method='nlm', maxiter=5000)
+#add a variable "root" to redata files, where value is 1
+redata<- data.frame(redata, root=1)
 
-summary(aout, show.graph=TRUE, info.tol = 1e-11)
+aouta<- aster(resp~varb, pred, fam, varb, id, root, data=redata, method='CG', maxiter = 5000)
+
+summary(aouta, show.graph=TRUE,info.tol = 1e-14)
+
+
+
+
+aout<- aster(resp~varb + fit:(Region), pred, fam, varb, id, root, data=redata, method='nlm')
+
+summary(aout, show.graph=TRUE, info.tol = 1e-16)
 
 anova(aouta, aout)
 
-aoutb<- aster(resp~ varb + fit:(Block.ID + Region + Block.ID*Region), pred, fam, varb, id, root, data = redata, method='nlm')
+aoutb<- aster(resp~ varb + fit:(Region +  Block.ID), pred, fam, varb, id, root, data = redata)
 
 summary(aoutb, show.graph=T, info.tol = 1e-10)
 
-anova(aout, aoutb)
+aoutc<- aster(resp~ varb + fit:(Region +  Block.ID+ Block.ID*Region), pred, fam, varb, id, root, data = redata)
+summary(aoutc, show.graph=T)
+
+anova(aout, aoutb, aoutc)
 
 #############################
 

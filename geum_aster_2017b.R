@@ -79,55 +79,52 @@ dat2$Survival.Y.N[dat2$Survival.Y.N==0 & dat2$Survival.Y.N.2017==1]=1
 #flw.no >0, but flw.y.n=0
 subset(dat2, Total.Flowers.2017 >0 & Flower.Y.N.2017==0)# 10 errors
 
-#set flw.y.n=1, but this introduces 3 new erorrs to survival, so recorrect
+#following changes confirmed by Zeb 04/30/2019
+dat2$Total.Flowers.2017[dat2$Family.Unique=="MB-CRN_10" & dat2$Block.ID==1]=0
+dat2$Total.Flowers.2017[dat2$Family.Unique=="MB-CRN_2" & dat2$Block.ID==7]=0
+
+#set flw.y.n=1 for these above cases
 dat2$Flower.Y.N.2017[dat2$Total.Flowers.2017 >0 & dat2$Flower.Y.N.2017==0]=1
 
-
-
-
-
-
-
-
-#flowered but no survival
-subset(dat2, Survival.Y.N.2017==0 & Flower.Y.N.2017==1)# 17 errors
-
-#fix errors: set survival.y.n to 1
-dat2$Survival.Y.N.2017[dat2$Survival.Y.N.2017==0 & dat2$Flower.Y.N.2017==1]=1
-
-
-
-
-
-#recheck for surv.2017=0 & flw.y.n.2017 =1
-subset(dat2, Survival.Y.N.2017==0 & Flower.Y.N.2017==1)# 3 new errors
-
-#fix errors: set survival.y.n to 1 to correct these new errors
-dat2$Survival.Y.N.2017[dat2$Survival.Y.N.2017==0 & dat2$Flower.Y.N.2017==1]=1
 
 #fruit.y.n =1, flw.no=0
 subset(dat2, Fruit.Y.N.2017==1 & Total.Flowers.2017 ==0)# 7 errors
 
-#fix errors: set total.flw =1: this should be checked by Zeb
-dat2$Total.Flowers.2017[dat2$Fruit.Y.N.2017==1 & dat2$Total.Flowers.2017 ==0]=1
+#change total number of flowers (2017) to 1. Confirmed by Zeb 04/30/2019
+dat2$Total.Flowers.2017[dat$Fruit.Y.N.2017==1 & dat2$Total.Flowers.2017 ==0]=1
 
-#frt.no >0, but frt.y.n=0
-subset(dat2, Fruit.Y.N.2017==0 & No.Fruit.2017 > 0)# many errors
 
-#fix errors: set frt.y.n=1 for these erors -> this should be checked by Zeb
-dat2$Fruit.Y.N.2017[dat2$Fruit.Y.N.2017==0 & dat2$No.Fruit.2017 > 0]=1
+#frt number >0, but fruit.y.n==0
+subset(dat2, No.Fruit.2017 > 0 & Fruit.Y.N.2017==0)
 
-#sm.2 >0 but frt.no =0
-subset(dat2, sm.2 > 0 & No.Fruit.2017 ==0)# 5 error
+#the following changes confirmed by Zeb 04/30/2019
+dat2$No.Fruit.2017[dat2$Family.Unique=="MB-CRN_2" & dat2$Block.ID==7]=0
 
-#fix errors: set frut.No=1, but will introduce 1 new error with frut.y.n, so recheck
-dat2$No.Fruit.2017[dat2$sm.2 > 0 & dat2$No.Fruit.2017 ==0]=1
+#Change remaining issues (from line98) to Fruit.Y.N.2017=1, confirmed by Zeb 04/30/2019
+dat2$Fruit.Y.N.2017[dat2$No.Fruit.2017 > 0 & dat2$Fruit.Y.N.2017==0]=1
 
-#recheck frt.no >0, but frt.y.n=0
-subset(dat2, Fruit.Y.N.2017==0 & No.Fruit.2017 > 0)# 1 new introduced error
+#seed mass >0 but fruit number 2017 =0
+subset(dat2, sm.2 > 0 & No.Fruit.2017==0)
 
-#fix error: set frt.y.n=1
-dat2$Fruit.Y.N.2017[dat2$Fruit.Y.N.2017==0 & dat2$No.Fruit.2017 > 0]=1
+#the following changes confirmed by Zeb 04/30/2019
+dat2$sm.2[dat2$Family.Unique=="MB-CRN_2" & dat2$Block.ID==7]=0
+
+# Removing individuals: CAR-NBA_4, MB-MR_32, NAP-CE_6, SD-MUD_10, SD-PMG_NA
+
+dat3<-dat2[!(dat2$sm.2 >0 & dat2$No.Fruit.2017==0),]
+
+dat2<-dat3
+
+#now make new survival to 2017 after winter of 2016 variable
+
+dat2$Surv2017[dat2$Flower.Y.N.2017==1]=1
+
+dat2$Surv2017[is.na(dat2$Surv2017)] <- 0
+
+dat2$any.seeds[dat2$sm.2 > 0]=1
+dat2$any.seeds[is.na(dat2$any.seeds)] <- 0
+
+
 
 ###########################################
 #Begin 2017 analysis
@@ -135,11 +132,19 @@ dat2$Fruit.Y.N.2017[dat2$Fruit.Y.N.2017==0 & dat2$No.Fruit.2017 > 0]=1
 #preliminaries: make 2017 seed mass variable (2016 seedmass + 2017 seedmass)
 
 dat2$sm2017<- dat2$sm + dat2$sm.2
+#lifetime fruit set?
 
+dat2$any.frt[dat2$sm2017 > 0]=1
+dat2$any.frt[is.na(dat2$any.frt)] <- 0
 
-vars<- c("Germination.Y.N", "Survival.Y.N","Flower.Y.N.2016", "No.Flowers.2016", 
-         "Fruit.Y.N.2016","No.Fruit.2016", "Survival.Y.N.2017","Flower.Y.N.2017",
-         "Total.Flowers.2017","Fruit.Y.N.2017", "No.Fruit.2017","sm2017")
+dat2$any.flw[dat2$any.frt > 0]=1
+dat2$any.flw[is.na(dat2$any.flw)] <- 0
+
+#vars<- c("Germination.Y.N", "Survival.Y.N","Surv2017", "No.Flowers.2016","Total.Flowers.2017", 
+ #        "No.Fruit.2016", "No.Fruit.2017","any.flw", "any.frt", "sm2017")
+
+vars<- c("Surv2017", "Flower.Y.N.2017","Total.Flowers.2017", 
+         "No.Fruit.2017", "sm.2")
 
 #reshape data so that all response variables are located in a single vector in a new data
 #set called "redata"
@@ -147,7 +152,7 @@ redata2017 <- reshape(dat2, varying = list(vars), direction = "long",timevar = "
 
 
 #Designation of fitness variable for 2016 data
-fit <- grepl("sm2017", as.character(redata2017$varb))
+fit <- grepl("sm.2", as.character(redata2017$varb))
 fit<- as.numeric(fit)
 
 redata2017$fit <- fit
@@ -160,25 +165,37 @@ with(redata2017, sort(unique(as.character(varb)[fit == 1])))
 #add a variable "root" to redata files, where value is 1
 redata2017<- data.frame(redata2017, root=1)
 
+#fit negative binomial dis. for seed mass
+
+#set up custom family list
+
+famlist <- list(fam.bernoulli(),fam.negative.binomial(0.30567292),fam.negative.binomial(0.237301961),
+                fam.negative.binomial(8.459764e-02))
+
+
 
 #load aster package
 library(aster)
 
-pred<- c(0,1,2,3,4,5,6,7)
-fam<- c(1,1,1,1,2,1,2,2)
+#pred<- c(0,1,2,3,4,5,2,7,8,9,6,11,12)
+
 #describe dist. of preds.
+pred<- c(0,1,2,3,4)
+
+#using famlist to use negative binomial distribution
+fam<- c(1,1,2,3,4)
+
 sapply(fam.default(), as.character)[fam]
 
-#fixed effect model for 2015 with only fitness
-aouta<- aster(resp~varb, pred, fam, varb, id, root, data=redata2017)
+#fixed effect model for 2017 with only fitness: note the use of 'famlist'
+aouta<- aster(resp~varb, pred, fam, varb, id, root, data=redata2017,famlist = famlist, maxiter = 5000)
 
-summary(aouta, show.graph=T, info.tol=1e-9)
+summary(aouta, show.graph=T, info.tol = 1e-15)
 
-aout<- aster(resp~varb + fit:(Region), pred, fam, varb, id, root, data=redata2017, method='nlm')
+aout<- aster(resp~varb + fit:(Region), pred, fam, varb, id, root, data=redata2017, famlist=famlist)
 
 
-summary(aout, show.graph = TRUE, info.tol=1e-10)
-
+summary(aout, show.graph = TRUE, info.tol=1e-15)
 
 anova(aouta, aout)
 
