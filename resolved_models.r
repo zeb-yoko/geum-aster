@@ -336,7 +336,7 @@ View(df)
 hist(df$sm)
 hist(df1$Seedmass.2016)
 df1<-df[!is.na(df$sm),]
-hist(df1$Seedmass.2016)
+hist(df1$sm)
 f1g <- fitdist(df1$sm, "pois")
 f1g <- fitdist(df1$sm, "nbinom")
 plot(f1g)
