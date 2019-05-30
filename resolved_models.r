@@ -7,9 +7,13 @@ library(QGglmm)
 ##new package##
 #install.packages("fitdistrplus")
 library(fitdistrplus)
-##NOTE: Distributions were primarily determined in aster-distros script##
-df <- read.csv('NV_CG_Experiment-mg.csv')
-## change to cleaned data from aster model when ready##
+##NOTE: Distributions for variables in ASTER analysis taken from there##
+##phenology variables primarily determined in aster-distros script##
+#old datasheet
+#df <- read.csv('NV_CG_Experiment-mg.csv')
+##cleaned data from aster model datasheet in git repo##
+df <- read.csv("full_clean_geum_experiment.csv")
+
 
 ###########################################################
 ##INDIVIDUAL MODELS PER TRAIT TO CALCULATE HERITABILITIES##
@@ -86,10 +90,13 @@ range(df$No.Days.to.TrueLeaf)
 ##for fitdist##
 TrueLeaf <- df[!is.na(df$No.Days.to.TrueLeaf),]
 descdist(log(TrueLeaf$No.Days.to.TrueLeaf), boot = 100)
-f1g <- fitdist(log(TrueLeaf$No.Days.to.TrueLeaf), "lnorm")
+f1g <- fitdist(TrueLeaf$No.Days.to.TrueLeaf, "lnorm")
+f2g <- fitdist(TrueLeaf$No.Days.to.TrueLeaf, "pois")
 ##works##
 plot(f1g)
 summary(f1g)
+plot(f2g)
+summary(f2g)
 ##TrueLeaf##
 TrueLeaf.mod <- glmer(No.Days.to.TrueLeaf~Region + (1 | Population) + 
 							(1 | Family.Unique) + (1 | Block.ID), data = df,
@@ -148,9 +155,14 @@ f1g <- fitdist(FLR$no.Planting.to.DTFF, "pois")
 ##works##
 plot(f1g)
 summary(f1g)
+f1g <- fitdist(FLR$no.Planting.to.DTFF, "pois")
+##works##
+plot(f1g)
+summary(f1g)
+
 dtff.mod<- glmer(no.Planting.to.DTFF~Region + (1 | Population) + 
 					  	(1 | Family.Unique) + (1 | Block.ID), data = flr.16,
-					  family = poisson(link=log))
+					  family = Gamma(link=log))
 hist(residuals(dtff.mod))
 summary(dtff.mod)
 hist(residuals(dtff.mod))
@@ -185,17 +197,18 @@ herit2 <- QGparams(mu = mu, var.a = va, var.p = vp, model = "Poisson.log")
 herit2
 
 ##run rptPoisson to see how much variance explained by effects##
-library(rptR)
-rpt.dtff<-rptPoisson(formula = no.Planting.to.DTFF~Region + (1 | Population) + 
-							(1 | Family.Unique) + (1 | Block.ID), 
-							grname = c("Fixed", "Block.ID", "Population", "Family.Unique"),
-							data = flr.16, link = "log", nboot =0, ratio =T, adjusted =F)
-rpt.dtff
+##We
+#library(rptR)
+#rpt.dtff<-rptGamma(formula = no.Planting.to.DTFF~Region + (1 | Population) + 
+#							(1 | Family.Unique) + (1 | Block.ID), 
+#							grname = c("Fixed", "Block.ID", "Population", "Family.Unique"),
+#							data = flr.16, link = "log", nboot =0, ratio =T, adjusted =F)
+#rpt.dtff
 ##NOTE--BASICALLY ZERO BECAUSE MODEL EXPLAINS ESSENTIALLY NOTHING##
 
 h2[3,1] <- "Date to first flower"
 h2[3,2] <- "2016"
-h2[3,3] <- 0
+h2[3,3] <- herit2$h2.obs
 h2
 ############################
 
@@ -203,7 +216,7 @@ h2
 ############################
 n.flr.mod <- glmer(No.Flowers.2016~Region + (1 | Population) + 
 						 	(1 | Family.Unique) + (1 | Block.ID), data = df,
-						 family=poisson(link=log))
+						 family=neg.bin(theta = 1.12571436))
 hist(residuals(n.flr.mod))
 
 vars <- as.data.frame(VarCorr(n.flr.mod))[, c('grp','vcov')]
@@ -236,16 +249,16 @@ herit2 <- QGparams(mu = mu, var.a = va, var.p = vp, model = "Poisson.log")
 herit2
 
 ##Run rptPoisson to see how much variance explained by model effects##
-rpt.nflr<-rptPoisson(formula = No.Flowers.2016~Region + (1 | Population) + 
-								(1 | Family.Unique) + (1 | Block.ID), 
-							grname = c("Fixed", "Block.ID", "Population", "Family.Unique"),
-							data = flr.16, link = "log", nboot =0, ratio =T, adjusted =F)
-rpt.nflr
+#rpt.nflr<-rptPoisson(formula = No.Flowers.2016~Region + (1 | Population) + 
+#								(1 | Family.Unique) + (1 | Block.ID), 
+#							grname = c("Fixed", "Block.ID", "Population", "Family.Unique"),
+#							data = flr.16, link = "log", nboot =0, ratio =T, adjusted =F)
+#rpt.nflr
 ##NOTE--BASICALLY ZERO BECAUSE MODEL EXPLAINS ESSENTIALLY NOTHING##
 
 h2[4,1] <- "Number of Flowers"
 h2[4,2] <- "2016"
-h2[4,3] <- 0
+h2[4,3] <- herit2$h2.obs
 h2
 ###########################
 
@@ -614,9 +627,13 @@ h2
 flr.18 <- filter(df, Flowering.Y.N.2018 >= 1)
 hist(df$DtB.Oday.2018)
 flr18 <- flr.18[!is.na(flr.18$DtB.Oday.2018),]
-f1g <- fitdist(flr18$DtB.Oday.2018, "norm")
-f2g <- fitdist(flr18$DtB.Oday.2018, "pois")
-
+f1g <- fitdistr(flr18$DtB.Oday.2018, "normal")
+f2g <- fitdistr(flr18$DtB.Oday.2018, "poisson")
+f3g <- fitdistr(flr18$DtB.Oday.2018, "negative binomial")
+f1g
+AIC(f1g, f2g)
+plot(f1g)
+plot(f2g)
 ##Roughly normal? OR poisson??##
 dtb18.mod<- glmer(DtB.Oday.2018~Region + (1 | Population) + 
 							(1 | Family.Unique) + (1 | Block.ID), data = flr18,
