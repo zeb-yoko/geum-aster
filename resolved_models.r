@@ -129,7 +129,7 @@ lh2
 
 ##Run QGparams to convert to observation scale (gives real heritability values)##
 ##put in QGparams##
-herit2 <- QGparams(mu = mu, var.a = va, var.p = vp, model = "Poisson.log")
+herit2 <- QGparams(mu = mu, var.a = va, var.p = vp, theta = theta, model = "Poisson.log")
 ##NOTE: with mu being regional(fixed effect) mean, heritability is calculated as h2 of trait 
 #across all regions, could be worth breaking apart##
 herit2
@@ -143,6 +143,7 @@ h2
 #############################
 
 ##DTFF 2016##
+##CHECK DISTRO--Gamma working, but not resolved in QGparams##
 #############################
 ##check distribution first##
 #make date number?
@@ -162,7 +163,7 @@ summary(f1g)
 
 dtff.mod<- glmer(no.Planting.to.DTFF~Region + (1 | Population) + 
 					  	(1 | Family.Unique) + (1 | Block.ID), data = flr.16,
-					  family = Gamma(link=log))
+					  family = poisson(link=log))
 hist(residuals(dtff.mod))
 summary(dtff.mod)
 hist(residuals(dtff.mod))
@@ -191,11 +192,11 @@ lh2
 
 ##Run QGparams to convert to observation scale (gives real heritability values)##
 ##put in QGparams##
-herit2 <- QGparams(mu = mu, var.a = va, var.p = vp, model = "Poisson.log")
+herit2 <- QGparams(mu = mu, var.a = va, var.p = vp, model = "gamma.log")
 ##NOTE: with mu being regional(fixed effect) mean, heritability is calculated as h2 of trait 
 #across all regions, could be worth breaking apart##
 herit2
-
+?QGparams
 ##run rptPoisson to see how much variance explained by effects##
 ##We
 #library(rptR)
@@ -217,6 +218,14 @@ h2
 n.flr.mod <- glmer(No.Flowers.2016~Region + (1 | Population) + 
 						 	(1 | Family.Unique) + (1 | Block.ID), data = df,
 						 family=neg.bin(theta = 1.12571436))
+n.flr.mod2 <- glmer.nb(No.Flowers.2016~Region + (1 | Population) + 
+						 	(1 | Family.Unique) + (1 | Block.ID), data = df)
+n.flr.mod2
+n.flr.mod3 <- glmer(No.Flowers.2016~Region + (1 | Population) + 
+						 	(1 | Family.Unique) + (1 | Block.ID), data = df,
+						 family=neg.bin(theta = 0.1874))
+hist(residuals(n.flr.mod3))
+hist(residuals(n.flr.mod2))
 hist(residuals(n.flr.mod))
 
 vars <- as.data.frame(VarCorr(n.flr.mod))[, c('grp','vcov')]
@@ -228,7 +237,7 @@ intercept
 
 ##View latent-scale values region mean##
 ##values are for variables from model, not yet converted to observation scale##
-
+theta <-  1.12571436
 ##region mean##
 mu <- intercept
 ##additive variance NOTE: 4 times value due to half-sibling design##
@@ -243,7 +252,7 @@ lh2
 
 ##Run QGparams to convert to observation scale (gives real heritability values)##
 ##put in QGparams##
-herit2 <- QGparams(mu = mu, var.a = va, var.p = vp, model = "Poisson.log")
+herit2 <- QGparams(mu = mu, var.a = va, var.p = vp, theta = theta, model = "negbin.log")
 ##NOTE: with mu being regional(fixed effect) mean, heritability is calculated as h2 of trait 
 #across all regions, could be worth breaking apart##
 herit2
@@ -254,7 +263,8 @@ herit2
 #							grname = c("Fixed", "Block.ID", "Population", "Family.Unique"),
 #							data = flr.16, link = "log", nboot =0, ratio =T, adjusted =F)
 #rpt.nflr
-##NOTE--BASICALLY ZERO BECAUSE MODEL EXPLAINS ESSENTIALLY NOTHING##
+
+##NOTE--With Negative binomial and theta from Mason--residuals Bad##
 
 h2[4,1] <- "Number of Flowers"
 h2[4,2] <- "2016"
@@ -271,7 +281,7 @@ f1g <- fitdist(df1$No.Fruit.2016, "pois")
 plot(f1g)
 n.fruit.mod <- glmer(No.Fruit.2016~Region + (1 | Population) + 
 								(1 | Family.Unique) + (1 | Block.ID), data = df1,
-							family=poisson(link=log))
+							family=neg.bin(theta = 3.5074887))
 n.fruit.out <-	summary(n.fruit.mod)
 n.fruit.out
 #store residuals
@@ -322,15 +332,23 @@ h2
 
 ##Seedmass 2016##
 ###########################
+View(df)
 hist(df$sm)
-hist(df1$sm)
+hist(df1$Seedmass.2016)
 df1<-df[!is.na(df$sm),]
+hist(df1$Seedmass.2016)
 f1g <- fitdist(df1$sm, "pois")
 f1g <- fitdist(df1$sm, "nbinom")
 plot(f1g)
-n.seed.mod <- glmer.nb(Seedmass16.mg~Region + (1 | Population) + 
-						  	(1 | Family.Unique) + (1 | Block.ID), data = df1)#,
+n.seed.mod <- glmer(sm~Region + (1 | Population) + 
+						  	(1 | Family.Unique) + (1 | Block.ID), data = df1,
+							family = neg.bin(theta = 1.0341103))
 n.seed.out <-	summary(n.seed.mod)
+
+n.seed.mod2 <- glmer.nb(Seedmass16.mg~Region + (1 | Population) + 
+							  	(1 | Family.Unique) + (1 | Block.ID), data = df1)#,
+n.seed.out2 <-	summary(n.seed.mod2)
+
 n.seed.out
 hist(residuals(n.seed.mod))
 rpt.seedmass<-rpt(formula = Seedmass16.mg~Region + (1 | Population) + 
