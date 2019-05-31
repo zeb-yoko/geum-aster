@@ -33,7 +33,7 @@ f1g <- fitdist(germ$No.Days.to.Germ, "pois")
 ##works##
 plot(f1g)
 summary(f1g)
-##germination##
+
 ##model statement##
 germ.mod <- glmer(No.Days.to.Germ~Region + (1 | Population) + 
 							(1 | Family.Unique) + (1 | Block.ID), data = df,
@@ -92,18 +92,19 @@ TrueLeaf <- df[!is.na(df$No.Days.to.TrueLeaf),]
 descdist(log(TrueLeaf$No.Days.to.TrueLeaf), boot = 100)
 f1g <- fitdist(TrueLeaf$No.Days.to.TrueLeaf, "lnorm")
 f2g <- fitdist(TrueLeaf$No.Days.to.TrueLeaf, "pois")
-##works##
 plot(f1g)
 summary(f1g)
 plot(f2g)
 summary(f2g)
-##TrueLeaf##
+
+##Model Statement##
 TrueLeaf.mod <- glmer(No.Days.to.TrueLeaf~Region + (1 | Population) + 
 							(1 | Family.Unique) + (1 | Block.ID), data = df,
 							 family=poisson(link=log))
-
+##output##
 summary(TrueLeaf.mod)
 hist(residuals(TrueLeaf.mod))
+
 ##intercept and variance components for QGglmm##
 vars <- as.data.frame(VarCorr(TrueLeaf.mod))[, c('grp','vcov')]
 intercept <- fixef(TrueLeaf.mod)['(Intercept)']
@@ -114,7 +115,6 @@ intercept
 
 ##View latent-scale values region mean##
 ##values are for variables from model, not yet converted to observation scale##
-
 ##region mean##
 mu <- intercept
 ##additive variance NOTE: 4 times value due to half-sibling design##
@@ -130,12 +130,11 @@ lh2
 ##Run QGparams to convert to observation scale (gives real heritability values)##
 ##put in QGparams##
 herit2 <- QGparams(mu = mu, var.a = va, var.p = vp, theta = theta, model = "Poisson.log")
-##NOTE: with mu being regional(fixed effect) mean, heritability is calculated as h2 of trait 
-#across all regions, could be worth breaking apart##
+##NOTE: with mu being regional(fixed effect) mean, heritability is calculated as 
+#h2 of trait across all regions, could be worth breaking apart##
 herit2
-##NOTE: with mu being regional(fixed effect) mean, heritability is calculated as h2 of trait 
-#across all regions, could be worth breaking apart?##
-herit2
+
+##Add to Table##
 h2[2,1] <- "TrueLeaf"
 h2[2,2] <- "2015"
 h2[2,3] <- herit2$h2.obs
@@ -143,43 +142,32 @@ h2
 #############################
 
 ##DTFF 2016##
-##CHECK DISTRO--Gamma working, but not resolved in QGparams##
 #############################
 ##check distribution first##
-#make date number?
+##remove NAs for descdist##
 flr.16 <- filter(df, Flower.Y.N.2016 >= 1)
-#trueleaf#
 hist(flr.16$no.Planting.to.DTFF)
 FLR <- flr.16[!is.na(flr.16$no.Planting.to.DTFF),]
 descdist(FLR$no.Planting.to.DTFF, boot = 100)
 f1g <- fitdist(FLR$no.Planting.to.DTFF, "pois")
 f2g <- fitdist(FLR$no.Planting.to.DTFF, "gamma")
-boxplot(FLR$no.Planting.to.DTFF~Region, data = FLR)
-f4g <- fitdistr(FLR$no.Planting.to.DTFF, "gamma")
-f4g
-k <- f4g$estimate[1]
-theta <- 1/(f4g$estimate[2])
+plot(f1g)
 plot(f2g)
-##works##
-plot(f1g)
-summary(f1g)
-f1g <- fitdist(FLR$no.Planting.to.DTFF, "pois")
-##works##
-plot(f1g)
-summary(f1g)
-##working poisson model--crappy, explains little variance##
-dtff.pos<- glmer(no.Planting.to.DTFF~Region + (1 | Population) + 
-					  	(1 | Family.Unique) + (1 | Block.ID), data = flr.16,
-					  family = poisson(link=log))
-hist(residuals(dtff.pos))
-summary(dtff.pos)
+##Gamma seems best, will need parameters (from fitdistr)##
+g <- fitdistr(FLR$no.Planting.to.DTFF, "gamma")
+g
+k <- g$estimate[1]
+theta <- 1/(g$estimate[2])
+
+##Model Statement##
 dtff.gam <- glmer(no.Planting.to.DTFF~Region + (1 | Population) + 
 					  	(1 | Family.Unique) + (1 | Block.ID), data = flr.16,
 					  family = Gamma(link=log))
-hist(residuals(dtff.gam))
+##model output##
 summary(dtff.gam)
 hist(residuals(dtff.gam))
 dtff.gam
+
 ##intercept and variance components for QGglmm##
 vars <- as.data.frame(VarCorr(dtff.gam))[, c('grp','vcov')]
 intercept <- fixef(dtff.gam)['(Intercept)']
@@ -190,7 +178,6 @@ intercept
 
 ##View latent-scale values region mean##
 ##values are for variables from model, not yet converted to observation scale##
-
 ##region mean##
 mu <- intercept
 ##additive variance NOTE: 4 times value due to half-sibling design##
@@ -203,43 +190,33 @@ vp
 lh2 <- va/vp
 lh2
 
-##Run QGparams to convert to observation scale (gives real heritability values)##
-##put in QGparams##
-herit2 <- QGparams(mu = mu, var.a = va, var.p = vp, model = "Poisson.log")
-##NOTE: with mu being regional(fixed effect) mean, heritability is calculated as h2 of trait 
-#across all regions, could be worth breaking apart##
-herit2
-##IF RUNNING GAMMA DISTRIBUTION, NEED 'CUSTOM' MODEL DESGIN IN QGPARAMS##
+#################Gamma custom###########
+###IF RUNNING GAMMA DISTRIBUTION, NEED 'CUSTOM' MODEL DESGIN IN QGPARAMS##
 ##per wikipedia gamma consists of two parameters: shape parameter (k) and scale (theta)##
 ##https://stats.stackexchange.com/questions/96972/how-to-interpret-parameters-in-glm-with-family-gamma
-##Pull from fitdistr##
-f4g <- fitdistr(FLR$no.Planting.to.DTFF, "gamma")
-f4g
-k <- f4g$estimate[1]
-theta <- 1/(f4g$estimate[2])
 
+##Pull parameters from fitdistr##
+g <- fitdistr(FLR$no.Planting.to.DTFF, "gamma")
+g
+##Shape parameter (k)##
+k <- g$estimate[1]
+##fitdistr gives rate parameter (beta), which is inverse of scale(theta)##
+##using theta because scale term seems more common##
+theta <- 1/(g$estimate[2])
 e <- exp(1)
+##define functions for QGparams##
 inv.link <- function(x){exp(x)}
 var.func <- function(x){k*theta^2}
-d.inv.link <- function(x){exp(x)}
+d.inv.link <- function(x){e^(x)}
 custom.functions <- list(inv.link =inv.link, var.func=var.func,
 									d.inv.link = d.inv.link)
 herit.gam <- QGparams(mu = mu, var.a = va, var.p = vp, 
 							 custom.model = custom.functions) 
 herit.gam
-str(dtff.gam)							
-
-##run rptPoisson to see how much variance explained by effects##
-rpt.dtff<-rptGamma(formula = no.Planting.to.DTFF~Region + (1 | Population) + 
-							(1 | Family.Unique) + (1 | Block.ID), 
-							grname = c("Fixed", "Block.ID", "Population", "Family.Unique"),
-							data = flr.16, link = "log", nboot =0, ratio =T, adjusted =F)
-rpt.dtff
-##NOTE--BASICALLY ZERO BECAUSE MODEL EXPLAINS ESSENTIALLY NOTHING##
 
 h2[3,1] <- "Date to first flower"
 h2[3,2] <- "2016"
-h2[3,3] <- herit2$h2.obs
+h2[3,3] <- herit.gam$h2.obs
 h2
 ############################
 
@@ -429,22 +406,45 @@ hist(flr.17$DTFF.Ordinal.Day.2017)
 flr17 <- flr.17[!is.na(flr.17$DTFF.Ordinal.Day.2017),]
 f1g <- fitdist(flr17$DTFF.Ordinal.Day.2017, "norm")
 f2g <- fitdist(flr17$DTFF.Ordinal.Day.2017, "pois")
+f3g <- fitdist(flr17$DTFF.Ordinal.Day.2017, "gamma")
+f4g <- fitdist(flr17$DTFF.Ordinal.Day.2017, "nbinom")
+plot(f1g)
+plot(f2g)
+plot(f3g)
+plot(f4g)
 dtff.mod<- glmer(DTFF.Ordinal.Day.2017~Region + (1 | Population) + 
 					  	(1 | Family.Unique) + (1 | Block.ID), data = flr.17,
 					  ##first day = 107
 					  family = Gamma(link=log))
 hist(residuals(dtff.mod))
-#rpt.dtff<-rptPoisson(formula = DTFF.Ordinal.Day.2017~Region + (1 | Population) + 
-#								(1 | Family.Unique) + (1 | Block.ID), 
-#							grname = c("Fixed", "Block.ID", "Population", "Family.Unique"),
-#							data = flr.17, link = "log", nboot =0, ratio =T, adjusted =F)
-#rpt.dtff
-##NOTE--BASICALLY ZERO BECAUSE MODEL EXPLAINS ESSENTIALLY NOTHING##
 
+#################Gamma custom###########
+###IF RUNNING GAMMA DISTRIBUTION, NEED 'CUSTOM' MODEL DESGIN IN QGPARAMS##
+##per wikipedia gamma consists of two parameters: shape parameter (k) and scale (theta)##
+##https://stats.stackexchange.com/questions/96972/how-to-interpret-parameters-in-glm-with-family-gamma
+
+##Pull parameters from fitdistr##
+g <- fitdistr(flr17$DTFF.Ordinal.Day.2017, "gamma")
+g
+##Shape parameter (k)##
+k <- g$estimate[1]
+##fitdistr gives rate parameter (beta), which is inverse of scale(theta)##
+##using theta because scale term seems more common##
+theta <- 1/(g$estimate[2])
+e <- exp(1)
+##define functions for QGparams##
+inv.link <- function(x){exp(x)}
+var.func <- function(x){k*theta^2}
+d.inv.link <- function(x){e^(x)}
+custom.functions <- list(inv.link =inv.link, var.func=var.func,
+								 d.inv.link = d.inv.link)
+herit.gam <- QGparams(mu = mu, var.a = va, var.p = vp, 
+							 custom.model = custom.functions) 
+herit.gam
 ##add to table
 h2[7,1] <- "Date to First Flower"
 h2[7,2] <- "2017"
-h2[7,3] <- 0
+h2[7,3] <- herit.gam$h2.obs
 h2
 ###########################
 
