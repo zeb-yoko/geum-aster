@@ -404,10 +404,13 @@ flr.17$DTFF.Ordinal.Day.2017 <-as.numeric(flr.17$DTFF.Ordinal.Day.2017)
 flr.17 <- filter(df, Flower.Y.N.2017 >= 1)
 hist(flr.17$DTFF.Ordinal.Day.2017)
 flr17 <- flr.17[!is.na(flr.17$DTFF.Ordinal.Day.2017),]
+descdist(flr17$DTFF.Ordinal.Day.2017)
 f1g <- fitdist(flr17$DTFF.Ordinal.Day.2017, "norm")
 f2g <- fitdist(flr17$DTFF.Ordinal.Day.2017, "pois")
 f3g <- fitdist(flr17$DTFF.Ordinal.Day.2017, "gamma")
 f4g <- fitdist(flr17$DTFF.Ordinal.Day.2017, "nbinom")
+f5g <- fitdistr(flr17$DTFF.Ordinal.Day.2017, "Poisson")
+f5g
 plot(f1g)
 plot(f2g)
 plot(f3g)
@@ -417,6 +420,33 @@ dtff.mod<- glmer(DTFF.Ordinal.Day.2017~Region + (1 | Population) +
 					  ##first day = 107
 					  family = Gamma(link=log))
 hist(residuals(dtff.mod))
+dtff.mod<- glmer(DTFF.Ordinal.Day.2017~Region + (1 | Population) + 
+					  	(1 | Family.Unique) + (1 | Block.ID), data = flr.17,
+					  ##first day = 107
+					  family = Gamma(link=log))
+
+
+##intercept and variance components for QGglmm##
+vars <- as.data.frame(VarCorr(dtff.mod))[, c('grp','vcov')]
+intercept <- fixef(dtff.mod)['(Intercept)']
+##verify data loaded in to objects##
+vars
+##verify data loaded in to objects##
+intercept
+
+##View latent-scale values region mean##
+##values are for variables from model, not yet converted to observation scale##
+##region mean##
+mu <- intercept
+##additive variance NOTE: 4 times value due to half-sibling design##
+va <- 4*vars[vars[["grp"]] == "Family.Unique", "vcov"]
+va
+##total variance in trait##
+vp <- sum(vars[,"vcov"])
+vp
+##Latent-scale narrow-sense heritability##
+lh2 <- va/vp
+lh2
 
 #################Gamma custom###########
 ###IF RUNNING GAMMA DISTRIBUTION, NEED 'CUSTOM' MODEL DESGIN IN QGPARAMS##
