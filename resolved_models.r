@@ -543,19 +543,32 @@ flr17 <- flr.17[!is.na(flr.17$Fruit.O.Day.2017),]
 flr.17$Fruit.O.Day.2017 <-as.numeric(flr.17$Fruit.O.Day.2017)
 f1g <- fitdist(flr17$Fruit.O.Day.2017, "norm")
 f2g <- fitdist(flr17$Fruit.O.Day.2017, "pois")
+f3g <- fitdist(flr17$Fruit.O.Day.2017, "gamma")
 plot(f1g)
 plot(f2g)
+plot(f3g)
+###################Poisson model#######
 dtfr.mod<- glmer(Fruit.O.Day.2017~Region + (1 | Population) + 
 					  	(1 | Family.Unique) + (1 | Block.ID), data = flr17,
 					  ##first day = ~121
 					  family = poisson(link=log))
+
+hist(residuals(dtfr.mod))
 rpt.dtfr<-rptPoisson(formula = Fruit.O.Day.2017~Region + (1 | Population) + 
 						  	(1 | Family.Unique) + (1 | Block.ID), 
 						  grname = c("Fixed", "Block.ID", "Population", "Family.Unique"),
 						  data = flr17, link = "log", nboot =0, ratio =T, adjusted =F)
 rpt.dtfr
-vars <- as.data.frame(VarCorr(dtfr.mod))[, c('grp','vcov')]
-intercept <- fixef(dtfr.mod)['(Intercept)']
+######################################
+###################Gamma model######
+dtfr.mod2<- glmer(Fruit.O.Day.2017~Region + (1 | Population) + 
+					  	(1 | Family.Unique) + (1 | Block.ID), data = flr17,
+					  ##first day = ~121
+					  family = Gamma(link=log))
+
+hist(residuals(dtfr.mod2))
+vars <- as.data.frame(VarCorr(dtfr.mod2))[, c('grp','vcov')]
+intercept <- fixef(dtfr.mod2)['(Intercept)']
 ##verify data loaded in to objects##
 vars
 ##verify data loaded in to objects##
@@ -590,38 +603,153 @@ h2[9,3] <- herit2$h2.obs
 h2
 ###########################
 
+##No. flowers 2017##
+############################
+flr.17 <- filter(df, Total.Flowers.2017 >=1)
+#View(flr.17)
+flr17 <- df[!is.na(df$Total.Flowers.2017),]
+hist(flr17$Total.Flowers.2017)
+f1g <- fitdist(flr17$Total.Flowers.2017, "norm")
+f2g <- fitdist(flr17$Total.Flowers.2017, "pois")
+f3g <- fitdist(flr17$Total.Flowers.2017, "nbinom")
+plot(f1g)
+plot(f2g)
+plot(f3g)
+fitdistr(flr17$Total.Flowers.2017, "negative binomial")
+
+n.flr.mod <- glmer(Total.Flowers.2017~Region + (1 | Population) + 
+						 	(1 | Family.Unique) + (1 | Block.ID), data = flr17,
+						 family=neg.bin(theta = .296))
+hist(residuals(n.flr.mod))
+
+vars <- as.data.frame(VarCorr(n.flr.mod))[, c('grp','vcov')]
+intercept <- fixef(n.flr.mod)['(Intercept)']
+##verify data loaded in to objects##
+vars
+##verify data loaded in to objects##
+intercept
+
+##View latent-scale values region mean##
+##values are for variables from model, not yet converted to observation scale##
+theta <-  1.12571436
+##region mean##
+mu <- intercept
+##additive variance NOTE: 4 times value due to half-sibling design##
+va <- 4*vars[vars[["grp"]] == "Family.Unique", "vcov"]
+va
+##total variance in trait##
+vp <- sum(vars[,"vcov"])
+vp
+##Latent-scale narrow-sense heritability##
+lh2 <- va/vp
+lh2
+
+##Run QGparams to convert to observation scale (gives real heritability values)##
+##put in QGparams##
+herit2 <- QGparams(mu = mu, var.a = va, var.p = vp, theta = theta, model = "negbin.log")
+##NOTE: with mu being regional(fixed effect) mean, heritability is calculated as h2 of trait 
+#across all regions, could be worth breaking apart##
+herit2
+
+##NOTE--With Negative binomial and theta from Mason--residuals ok--model failed to converge##
+
+h2[10,1] <- "Number of Flowers"
+h2[10,2] <- "2017"
+h2[10,3] <- herit2$h2.obs
+h2
+
+##No. flowers 2017##
+############################
+flr.17 <- filter(df, No.Fruit.2017 >=1)
+#View(flr.17)
+flr17 <- df[!is.na(df$No.Fruit.2017),]
+hist(flr17$No.Fruit.2017)
+f1g <- fitdist(flr17$No.Fruit.2017, "norm")
+f2g <- fitdist(flr17$No.Fruit.2017, "pois")
+f3g <- fitdist(flr17$No.Fruit.2017, "nbinom")
+plot(f1g)
+plot(f2g)
+plot(f3g)
+fitdistr(flr17$No.Fruit.2017, "negative binomial")
+
+n.frt.mod <- glmer(No.Fruit.2017~Region + (1 | Population) + 
+						 	(1 | Family.Unique) + (1 | Block.ID), data = flr17,
+						 family=neg.bin(theta = .237))
+hist(residuals(n.frt.mod))
+
+vars <- as.data.frame(VarCorr(n.frt.mod))[, c('grp','vcov')]
+intercept <- fixef(n.frt.mod)['(Intercept)']
+##verify data loaded in to objects##
+vars
+##verify data loaded in to objects##
+intercept
+
+##View latent-scale values region mean##
+##values are for variables from model, not yet converted to observation scale##
+theta <-  0.237
+##region mean##
+mu <- intercept
+##additive variance NOTE: 4 times value due to half-sibling design##
+va <- 4*vars[vars[["grp"]] == "Family.Unique", "vcov"]
+va
+##total variance in trait##
+vp <- sum(vars[,"vcov"])
+vp
+##Latent-scale narrow-sense heritability##
+lh2 <- va/vp
+lh2
+
+##Run QGparams to convert to observation scale (gives real heritability values)##
+##put in QGparams##
+herit2 <- QGparams(mu = mu, var.a = va, var.p = vp, theta = theta, model = "negbin.log")
+##NOTE: with mu being regional(fixed effect) mean, heritability is calculated as h2 of trait 
+#across all regions, could be worth breaking apart##
+herit2
+
+##NOTE--With Negative binomial and theta from Mason--residuals ok--model failed to converge##
+
+h2[11,1] <- "Number of Fruit"
+h2[11,2] <- "2017"
+h2[11,3] <- herit2$h2.obs
+h2
+
 ##Seedmass 2017##
 ###########################
-flr.17 <- filter(df, Seedmass17.mg >=1)
+flr.17 <- filter(df, sm2017 >=1)
 #View(flr.17)
-hist(df$Seedmass17.mg)
-summary(df$Seedmass17.mg)
-flr17 <- flr.17[!is.na(flr.17$Seedmass17.mg),]
-f1g <- fitdist(flr17$Seedmass17.mg, "norm")
-f2g <- fitdist(flr17$Seedmass17.mg, "pois")
-f3g <- fitdist(flr17$Seedmass17.mg, "nbinom")
+hist(flr17$sm2017)
+summary(flr17$sm2017)
+flr17 <- df[!is.na(df$sm2017),]
+f1g <- fitdist(flr17$sm2017, "norm")
+f2g <- fitdist(flr17$sm2017, "pois")
+f3g <- fitdist(flr17$sm2017, "nbinom")
+##0s included##
+tdist <- fitdistr(flr17$sm2017, "negative binomial")
+tdist
+##0s filtered out##
+distro <- fitdistr(flr.17$sm2017, "negative binomial")
+distro
 plot(f1g)
 plot(f2g)
 plot(f3g)
 ##negative binomial rather than poisson, bc density on right tail high##
 ##when ran glmer.nb: Negative Binomial(1.347)  ( log )##
-seed17.mod<- glmer(Seedmass17.mg~1 +Region + (1 | Population) + 
+seed17.mod<- glmer(sm2017~Region + (1 | Population) + 
 						  	(1 | Family.Unique) + (1 | Block.ID), data = flr.17,
-						  family = negative.binomial(1.347))
+								##with all 0s included theta = 0.084
+						 		##with 0s removed, theta = .91700637
+						 		 family = negative.binomial(0.917))
 summary(seed17.mod)
 hist(residuals(seed17.mod))
-rpt.seed17<-rpt(formula = DtB.O.Day.2017~Region + (1 | Population) + 
-				 	(1 | Family.Unique) + (1 | Block.ID), 
-				 grname = c("Fixed", "Block.ID", "Population", "Family.Unique"),
-				 data = flr17,  datatype = "nbinom", link = "log", nboot =0, ratio =T, adjusted =F)
-rpt.seed17
+
+
 ##pull data from model##
 vars <- as.data.frame(VarCorr(seed17.mod))[, c('grp','vcov')]
 intercept <- fixef(seed17.mod)['(Intercept)']
 vars
 intercept
 ##additonal negative binomial parameter##
-theta <- 1.347
+theta <- 0.917
 
 ##latent region mean##
 mu <- intercept
@@ -639,9 +767,9 @@ herit2 <- QGparams(mu = mu, var.a = va, var.p = vp, theta = theta, model = "negb
 herit2
 
 ##add to table
-h2[10,1] <- "Seedmass (mg)"
-h2[10,2] <- "2017"
-h2[10,3] <- herit2$h2.obs
+h2[12,1] <- "Seedmass (mg)"
+h2[12,2] <- "2017"
+h2[12,3] <- herit2$h2.obs
 h2
 ###########################
 
