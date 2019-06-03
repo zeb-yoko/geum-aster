@@ -6,7 +6,7 @@ df <- read.csv("NV_CG_Experiment2wdist2.csv")
 ncol(df) #93
 library(tidyverse)
 ##remove columns in aster analysis## should remove 18 columns
-df <- select(df, -c(Germination.Y.N, Survival.Y.N, Survival.Y.N.2017, 
+df <- dplyr::select(df, -c(Germination.Y.N, Survival.Y.N, Survival.Y.N.2017, 
 					  Flower.Y.N.2016, Flower.Y.N.2017, No.Flowers.2016, Total.Flowers.2017,
 					  Fruit.Y.N.2016, Fruit.Y.N.2017, No.Fruit.2016, No.Fruit.2017,
 					  sm, sm.2, Flowering.Y.N.2018, Total.Flowers.2018, Fruit.Y.N.2018, 
