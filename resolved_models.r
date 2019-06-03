@@ -13,13 +13,13 @@ library(fitdistrplus)
 #df <- read.csv('NV_CG_Experiment-mg.csv')
 ##cleaned data from aster model datasheet in git repo##
 df <- read.csv("full_clean_geum_experiment.csv")
-
+View(df)
 
 ###########################################################
 ##INDIVIDUAL MODELS PER TRAIT TO CALCULATE HERITABILITIES##
 ###########################################################
 
-##germination##
+##germination##1
 ##############################
 ##check distribution first##
 hist(df$No.Days.to.Germ)
@@ -80,7 +80,7 @@ h2[1,2] <- "2015"
 h2[1,3] <- herit2$h2.obs
 #############################
 
-##trueleaf##
+##trueleaf##2
 #############################
 ##check distribution first##
 hist(df$No.Days.to.TrueLeaf)
@@ -141,7 +141,7 @@ h2[2,3] <- herit2$h2.obs
 h2
 #############################
 
-##DTFF 2016##
+##DTFF 2016##3
 #############################
 ##check distribution first##
 ##remove NAs for descdist##
@@ -220,7 +220,7 @@ h2[3,3] <- herit.gam$h2.obs
 h2
 ############################
 
-##No. flowers 2016##
+##No. flowers 2016##4
 ############################
 n.flr.mod <- glmer(No.Flowers.2016~Region + (1 | Population) + 
 						 	(1 | Family.Unique) + (1 | Block.ID), data = df,
@@ -279,7 +279,7 @@ h2[4,3] <- herit2$h2.obs
 h2
 ###########################
 
-##Number of fruit 2016##
+##Number of fruit 2016##5
 ###########################
 hist(df$No.Fruit.2016)
 df1 <- filter(df, No.Fruit.2016 >= 0)
@@ -337,7 +337,7 @@ h2[5,3] <- herit2$h2.obs
 h2
 ###########################
 
-##Seedmass 2016##
+##Seedmass 2016##6
 ###########################
 View(df)
 hist(df$sm)
@@ -394,7 +394,7 @@ h2
 
 ########2017 Season#############
 
-##DTFF 2017##
+##DTFF 2017##7
 ###########################
 flr.17 <- filter(df, Flower.Y.N.2017 >= 1)
 hist(df$DTFF.Ordinal.Day.2017)
@@ -478,7 +478,7 @@ h2[7,3] <- herit.gam$h2.obs
 h2
 ###########################
 
-##Date to bolt 2017##
+##Date to bolt 2017##8
 ###########################
 flr.17 <- filter(df, Flower.Y.N.2017 >= 1)
 hist(df$DtB.O.Day.2017)
@@ -535,7 +535,7 @@ h2[8,3] <- herit2$h2.obs
 h2
 ###########################
 
-##Date to Fruit##
+##Date to Fruit##9
 ###########################
 flr.17 <- filter(df, Flower.Y.N.2017 >= 1)
 hist(log(df$Fruit.O.Day.2017))
@@ -547,28 +547,15 @@ f3g <- fitdist(flr17$Fruit.O.Day.2017, "gamma")
 plot(f1g)
 plot(f2g)
 plot(f3g)
-###################Poisson model#######
-dtfr.mod<- glmer(Fruit.O.Day.2017~Region + (1 | Population) + 
-					  	(1 | Family.Unique) + (1 | Block.ID), data = flr17,
-					  ##first day = ~121
-					  family = poisson(link=log))
-
-hist(residuals(dtfr.mod))
-rpt.dtfr<-rptPoisson(formula = Fruit.O.Day.2017~Region + (1 | Population) + 
-						  	(1 | Family.Unique) + (1 | Block.ID), 
-						  grname = c("Fixed", "Block.ID", "Population", "Family.Unique"),
-						  data = flr17, link = "log", nboot =0, ratio =T, adjusted =F)
-rpt.dtfr
-######################################
 ###################Gamma model######
-dtfr.mod2<- glmer(Fruit.O.Day.2017~Region + (1 | Population) + 
+dtfr.mod<- glmer(Fruit.O.Day.2017~Region + (1 | Population) + 
 					  	(1 | Family.Unique) + (1 | Block.ID), data = flr17,
 					  ##first day = ~121
 					  family = Gamma(link=log))
 
-hist(residuals(dtfr.mod2))
-vars <- as.data.frame(VarCorr(dtfr.mod2))[, c('grp','vcov')]
-intercept <- fixef(dtfr.mod2)['(Intercept)']
+hist(residuals(dtfr.mod))
+vars <- as.data.frame(VarCorr(dtfr.mod))[, c('grp','vcov')]
+intercept <- fixef(dtfr.mod)['(Intercept)']
 ##verify data loaded in to objects##
 vars
 ##verify data loaded in to objects##
@@ -591,19 +578,37 @@ lh2
 
 ##Run QGparams to convert to observation scale (gives real heritability values)##
 ##put in QGparams##
-herit2 <- QGparams(mu = mu, var.a = va, var.p = vp, model = "Poisson.log")
-##NOTE: with mu being regional(fixed effect) mean, heritability is calculated as h2 of trait 
-#across all regions, could be worth breaking apart##
-herit2
+#################Gamma custom###########
+###IF RUNNING GAMMA DISTRIBUTION, NEED 'CUSTOM' MODEL DESGIN IN QGPARAMS##
+##per wikipedia gamma consists of two parameters: shape parameter (k) and scale (theta)##
+##https://stats.stackexchange.com/questions/96972/how-to-interpret-parameters-in-glm-with-family-gamma
 
+##Pull parameters from fitdistr##
+g <- fitdistr(flr17$Fruit.O.Day.2017, "gamma")
+g
+##Shape parameter (k)##
+k <- g$estimate[1]
+##fitdistr gives rate parameter (beta), which is inverse of scale(theta)##
+##using theta because scale term seems more common##
+theta <- 1/(g$estimate[2])
+e <- exp(1)
+##define functions for QGparams##
+inv.link <- function(x){exp(x)}
+var.func <- function(x){k*theta^2}
+d.inv.link <- function(x){e^(x)}
+custom.functions <- list(inv.link =inv.link, var.func=var.func,
+								 d.inv.link = d.inv.link)
+herit.gam <- QGparams(mu = mu, var.a = va, var.p = vp, 
+							 custom.model = custom.functions) 
+herit.gam
 ##add to table
 h2[9,1] <- "Date to fruit"
 h2[9,2] <- "2017"
-h2[9,3] <- herit2$h2.obs
+h2[9,3] <- herit.gam$h2.obs
 h2
 ###########################
 
-##No. flowers 2017##
+##No. flowers 2017##10
 ############################
 flr.17 <- filter(df, Total.Flowers.2017 >=1)
 #View(flr.17)
@@ -659,7 +664,7 @@ h2[10,3] <- herit2$h2.obs
 h2
 ############################
 
-##No. fruit 2017##
+##No. fruit 2017##11
 ############################
 flr.17 <- filter(df, No.Fruit.2017 >=1)
 #View(flr.17)
@@ -713,7 +718,7 @@ h2[11,3] <- herit2$h2.obs
 h2
 ###########################
 
-##Seedmass 2017##
+##Seedmass 2017##12
 ###########################
 flr.17 <- filter(df, sm2017 >=1)
 #View(flr.17)
@@ -775,12 +780,10 @@ h2
 
 ########2018 Season###########
 
-##DTFF##
+##DTFF##13
 ###########################
-flr.18 <- filter(df, Flowering.Y.N.2018 >= 1)
 hist(df$DTFF.18.Oday)
-hist(flr.18$DTFF.18.Oday)
-flr18 <- flr.18[!is.na(flr.18$DTFF.18.Oday),]
+flr18 <- df[!is.na(df$DTFF.18.Oday),]
 descdist(flr18$DTFF.18.Oday, boot = 100)
 f1g <- fitdist(flr18$DTFF.18.Oday, "norm")
 f2g <- fitdist(flr18$DTFF.18.Oday, "pois")
@@ -790,11 +793,17 @@ plot(f1g)
 plot(f2g)
 plot(f3g)
 plot(f4g)
-fitdistr(flr18$DTFF.18.Oday, "gamma")
+
+f1 <- fitdistr(flr18$DTFF.18.Oday, "normal")
+f2 <- fitdistr(flr18$DTFF.18.Oday, "Poisson")
+f3 <- fitdistr(flr18$DTFF.18.Oday, "gamma")
+f4 <- fitdistr(flr18$DTFF.18.Oday, "lognormal")
+f5 <- fitdistr(flr18$DTFF.18.Oday, "negative binomial")
+AIC(f1,f2,f3,f4)
 
 ##model statement##
 dtff18.mod<- glmer(DTFF.18.Oday~Region + (1 | Population) + 
-						 	(1 | Family.Unique) + (1 | Block.ID), data = flr.18,
+						 	(1 | Family.Unique) + (1 | Block.ID), data = flr18,
 						 family = Gamma(link = log))
 summary(dtff18.mod)
 hist(residuals(dtff18.mod))
@@ -849,13 +858,13 @@ herit.gam
 ##put in QGparams##
 
 ##add to table
-h2[11,1] <- "Date to first flower"
-h2[11,2] <- "2018"
-h2[11,3] <- herit.gam$h2.obs
+h2[13,1] <- "Date to first flower"
+h2[13,2] <- "2018"
+h2[13,3] <- herit.gam$h2.obs
 h2
 ###########################
 
-##Date to bolt##
+##Date to bolt##14
 ###########################
 flr.18 <- filter(df, Flowering.Y.N.2018 >= 1)
 hist(df$DtB.Oday.2018)
@@ -912,14 +921,13 @@ lh2
 herit2 <- QGparams(mu = mu, var.a = va, var.p = vp,  model = "Gaussian")
 herit2
 ##add to table
-h2[12,1] <- "Date to bolt"
-h2[12,2] <- "2018"
-h2[12,3] <- herit2$h2.obs
+h2[14,1] <- "Date to bolt"
+h2[14,2] <- "2018"
+h2[14,3] <- herit2$h2.obs
 h2
-
 ###########################
 
-##Date to Fruit 2018##
+##Date to Fruit 2018##15
 ###########################
 flr.18 <- filter(df, Flowering.Y.N.2018 >= 1)
 hist(flr.18$Date.to.Fruit.Oday.2018)
@@ -984,13 +992,13 @@ herit.gam <- QGparams(mu = mu, var.a = va, var.p = vp,
 herit.gam
 
 ##add to table
-h2[13,1] <- "Date to Fruit"
-h2[13,2] <- "2018"
-h2[13,3] <- herit.gam$h2.obs
+h2[15,1] <- "Date to Fruit"
+h2[15,2] <- "2018"
+h2[15,3] <- herit.gam$h2.obs
 h2
 ###########################
 
-##No. flowers 2018##
+##No. flowers 2018##16
 ############################
 View(df)
 flr.18 <- filter(df, Total.Flowers.2018 >=1)
@@ -1046,13 +1054,13 @@ herit2 <- QGparams(mu = mu, var.a = va, var.p = vp, theta = theta, model = "negb
 #across all regions, could be worth breaking apart##
 herit2
 
-h2[10,1] <- "Number of Flowers"
-h2[10,2] <- "2018"
-h2[10,3] <- herit2$h2.obs
+h2[16,1] <- "Number of Flowers"
+h2[16,2] <- "2018"
+h2[16,3] <- herit2$h2.obs
 h2
 ############################
 
-##No. fruit 2018##
+##No. fruit 2018##17
 ############################
 flr.18 <- filter(df, No.Fruit.2018 >=1)
 flr18 <- df[!is.na(df$No.Fruit.2018),]
@@ -1111,15 +1119,15 @@ herit2
 
 ##NOTE--With Negative binomial and theta from Mason--residuals ok--model failed to converge##
 
-h2[11,1] <- "Number of Fruit"
-h2[11,2] <- "2018"
-h2[11,3] <- herit2$h2.obs
+h2[17,1] <- "Number of Fruit"
+h2[17,2] <- "2018"
+h2[17,3] <- herit2$h2.obs
 h2
 ###########################
 
 
 
-##Seedmass 2018##
+##Seedmass 2018##18
 ###########################
 flr.18 <- filter(df, Flowering.Y.N.2018 >= 1)
 hist(flr.18$sm.3)
@@ -1176,9 +1184,9 @@ lh2
 herit2 <- QGparams(mu = mu, var.a = va, var.p = vp, theta = 1.2657, model = "negbin.log")
 herit2
 ##add to table
-h2[14,1] <- "seedmass"
-h2[14,2] <- "2018"
-h2[14,3] <- herit2$h2.obs
+h2[18,1] <- "seedmass"
+h2[18,2] <- "2018"
+h2[18,3] <- herit2$h2.obs
 h2
 ###########################
 
