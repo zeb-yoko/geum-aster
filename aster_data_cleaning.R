@@ -6,7 +6,10 @@
 ########################################################
 
 #replace NAs with 0 (zero)
-dat2[is.na(dat2)] <- 0
+#dat2[is.na(dat2)] <- 0
+
+dat2<- read.csv("NV_CG_Experiment2wdist2.csv")
+
 
 #survival but no germination
 subset(dat2, Germination.Y.N==0 & Survival.Y.N==1)# no errors
@@ -246,16 +249,14 @@ subset(dat2, Fruit.Y.N.2018==1 & Total.Flowers.2018==0)# 0 errors
 ########################################################################
 #Isolate "other" covariate data
 
-setwd("C:/Users/Mason Kulbaba/Dropbox/git/geum-aster")
-
-cov<- read.csv("NV_CG_Experiment2wdist2.csv")
+cov<- dat2
 
 #what's actually in here?
 names(cov)
 
 #isolate what we actually want
-cov2<-cov[c("Germination.Date","No.Days.to.Germ","True.Leaf", "No.Days.to.TrueLeaf",
-            "Germ.to.TrueLeaf",
+cov2<-cov[c("Family.Unique", "Block.ID", "Germination.Date","No.Days.to.Germ","True.Leaf", 
+            "No.Days.to.TrueLeaf","Germ.to.TrueLeaf")]
 
 
 

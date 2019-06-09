@@ -7,12 +7,21 @@ setwd("C:/Users/Mason Kulbaba/Dropbox/git/geum-aster")
 #load data
 #dat<- read.csv("NV_CG_Experiment2.csv")
 
-dat<- read.csv("cleaned_data_for_aster.csv")
+dat<- read.csv("fitness_landscape_data.csv")
 
 #subset data for 2016 analysis
 dat2<- dat[c( "Family.Unique",   "Block.ID", "HabitatType","Dist.from.cg.km",
              "Region", "Population", "Germination.Y.N","Survival.Y.N", "Flower.Y.N.2016",
              "No.Flowers.2016", "Fruit.Y.N.2016", "No.Fruit.2016", "sm")]
+
+#want to merge other covarite (predictor data) with above data for fitness landscape work
+
+dat2<-dat
+
+names(dat2)#2341
+names(cov2)#2345
+
+
 
 
 
@@ -109,13 +118,16 @@ aout2016a<- aster(resp~varb +0, pred, fam, varb, id, root, data=redata2016, faml
 summary(aout2016a, show.graph=TRUE)
 
 #add distance from seed source
-aout<- aster(resp~varb+0 + fit:Dist.from.cg.km, pred, fam, varb, id, root, data=redata2016, famlist = famlist)
+aout1<- aster(resp~varb+0 + fit:Dist.from.cg.km, pred, fam, varb, id, root, data=redata2016, famlist = famlist)
+
+summary(aout1, show.graph=T, info.tol=1e-11)
+
+aout<- aster(resp~varb+0 + fit:Dist.from.cg.km +fit:No.Days.to.Germ, pred, fam, varb, id, root, data=redata2016, famlist = famlist)
 
 summary(aout, show.graph=T, info.tol=1e-11)
 
-
 #liklihood ratio test
-anova(aout2016a, aout)# distance from seed source is significant!
+anova(aout2016a, aout1, aout)# distance from seed source is significant!
 
 #Start working with Dist from source as basic model. Note: these are unconditional models
 
@@ -125,9 +137,9 @@ aout$type
 ######################################################################
 # Estimate Selection Gradient (distance from source)
 
-pout <- predict(aout)
-pout <- matrix(pout, nrow = nrow(aout$x), ncol = ncol(aout$x))
-colnames(pout) <- colnames(aout$x)
+pout <- predict(aout1)
+pout <- matrix(pout, nrow = nrow(aout1$x), ncol = ncol(aout1$x))
+colnames(pout) <- colnames(aout1$x)
 mufit <- pout[, grep("sm", colnames(pout))]
 
 
@@ -143,6 +155,31 @@ wmout <- lm(wmu ~ dat2$Dist.from.cg.km)
 pre_w<- predict(wmout)
 
 summary(wmout)
+
+
+#Now try with two predictors dist to source and days to germination
+
+#see new aout model on line 125
+
+pout <- predict(aout)
+pout <- matrix(pout, nrow = nrow(aout$x), ncol = ncol(aout$x))
+colnames(pout) <- colnames(aout$x)
+mufit <- pout[, grep("sm", colnames(pout))]
+
+
+#only needed when >1 year of data
+#mufit <- apply(mufit, 1, "sum")
+
+#calcualte mean fitness
+wmu <- mufit/mean(mufit)
+
+#perform linear analysis
+wmout <- lm(wmu ~ dat2$No.Days.Germ + dat2$Dist.from.cg.km)
+
+pre_w<- predict(wmout)
+
+summary(wmout)
+
 
 
 ######################################################################
