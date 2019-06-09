@@ -104,12 +104,12 @@ sapply(fam.default(), as.character)[fam]
 
 #fixed effect model for 2016 with only fitness variable: this is the "basic" model
 # that we compare with later models, to determine significance of facotrs (e.g. Habitat Type, etc.)
-aout2016a<- aster(resp~varb, pred, fam, varb, id, root, data=redata2016, famlist = famlist)
+aout2016a<- aster(resp~varb +0, pred, fam, varb, id, root, data=redata2016, famlist = famlist)
 
 summary(aout2016a, show.graph=TRUE)
 
 #add distance from seed source
-aout<- aster(resp~varb + fit:Dist.from.cg.km, pred, fam, varb, id, root, data=redata2016, famlist = famlist)
+aout<- aster(resp~varb+0 + fit:Dist.from.cg.km, pred, fam, varb, id, root, data=redata2016, famlist = famlist)
 
 summary(aout, show.graph=T, info.tol=1e-11)
 
@@ -117,22 +117,35 @@ summary(aout, show.graph=T, info.tol=1e-11)
 #liklihood ratio test
 anova(aout2016a, aout)# distance from seed source is significant!
 
+#Start working with Dist from source as basic model. Note: these are unconditional models
+
+aout$type
 
 
 ######################################################################
+# Estimate Selection Gradient (distance from source)
 
-# Start with regular old Lande and Arnold estiamtes of B (beta)
-
-pout6 <- predict(aout2016a)
-pout6 <- matrix(pout6, nrow = nrow(aout2016a$x), ncol = ncol(aout2016a$x))
-colnames(pout6) <- colnames(aout2016a$x)
-mufit <- pout6[, grep("germ", colnames(pout6))]
-mufit <- apply(mufit, 1, "sum")
+pout <- predict(aout)
+pout <- matrix(pout, nrow = nrow(aout$x), ncol = ncol(aout$x))
+colnames(pout) <- colnames(aout$x)
+mufit <- pout[, grep("sm", colnames(pout))]
 
 
+#only needed when >1 year of data
+#mufit <- apply(mufit, 1, "sum")
+
+#calcualte mean fitness
+wmu <- mufit/mean(mufit)
+
+#perform linear analysis
+wmout <- lm(wmu ~ dat2$Dist.from.cg.km)
+
+pre_w<- predict(wmout)
+
+summary(wmout)
 
 
-
+######################################################################
 
 
 
