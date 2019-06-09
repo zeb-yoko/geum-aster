@@ -31,8 +31,8 @@ dat2$any.rep[is.na(dat2$any.rep)] <- 0
 
 
 ######################
-vars<- c("Germination.Y.N", "Survival.Y.N","Surv2017", "No.Flowers.2016","Total.Flowers.2017", 
-        "No.Fruit.2016", "No.Fruit.2017", "any.rep", "sm2017")
+vars<- c("Germination.Y.N", "Survival.Y.N","Surv2017", "Flower.Y.N.2016","Flower.Y.N.2017",
+         "No.Flowers.2016","Total.Flowers.2017","No.Fruit.2016", "No.Fruit.2017","sm", "sm.2")
 
 
 #look into distributions for nodes
@@ -43,7 +43,7 @@ vars
 #Isolate non bernoulli varibles, and prepare to test for 
 
 flwno<- dat2$No.Flowers.2016
-#flw.no<- subset(flwno, flwno >0)
+
 
 flwno2<- dat2$Total.Flowers.2017
 
@@ -52,6 +52,10 @@ frtno<- dat2$No.Fruit.2016
 frtno2<- dat2$No.Fruit.2017
 
 seeds<-dat2$sm2017
+
+sm<-dat$sm
+
+sm2<- dat$sm.2
 
 library(MASS)
 
@@ -98,6 +102,22 @@ seed.3<- fitdistr(seeds, "poisson")
 AIC(seed.1, seed.2, seed.3)
 seed.2
 
+#sm
+sm.1<- fitdistr(sm, "normal")
+sm.2<- fitdistr(sm, "negative binomial")#size: 0.0058024283
+sm.3<- fitdistr(sm, "poisson")
+
+AIC(sm.1, sm.2, sm.3)
+sm.2
+
+#sm.2
+sm.2.1<- fitdistr(sm2, "normal")
+sm.2.2<- fitdistr(sm2, "negative binomial")#size: 0.08457787
+sm.2.3<- fitdistr(sm2, "poisson")
+
+AIC(sm.2.1, sm.2.2, sm.2.3)
+sm.2.2
+
 #reshape data so that all response variables are located in a single vector in a new data
 #set called "redata"
 redata2017 <- reshape(dat2, varying = list(vars), direction = "long",timevar = "varb", times = as.factor(vars), v.names = "resp")
@@ -117,35 +137,49 @@ with(redata2017, sort(unique(as.character(varb)[fit == 1])))
 #add a variable "root" to redata files, where value is 1
 redata2017<- data.frame(redata2017, root=1)
 
-#fit negative binomial dis. for seed mass
-
-#set up custom family list
-
-famlist <- list(fam.bernoulli(),fam.negative.binomial(0.087611463),
-                fam.negative.binomial(0.30514117),fam.negative.binomial(0.027821465),
-                fam.negative.binomial(0.23720330), fam.negative.binomial(8.544092e-02))
-
-
 
 #load aster package
 library(aster)
 
-pred<- c(0,1,2,2,3,4,5,3,8)
 
-fam<- c(1,1,1,2,3,4,5,1,6)
+#set up custom family list
+
+famlist <- list(fam.bernoulli(),
+                fam.negative.binomial(0.087611463),
+                fam.negative.binomial(0.30514117),
+                fam.negative.binomial(0.027821465),
+                fam.negative.binomial(0.23720330), 
+                fam.negative.binomial(0.0058024283),
+                fam.negative.binomial(0.08457787))
+
+
+
+
+
+pred<- c(0,1,2,2,3,4,5,6,7,8,9)
+
+fam<- c(1,1,1,1,1,2,3,4,5,6,7)
 #sapply(fam.default(), as.character)[fam]
 
 #fixed effect model for 2017 with only fitness: note the use of 'famlist'
-aouta<- aster(resp~varb, pred, fam, varb, id, root, data=redata2017,famlist = famlist)
+aouta<- aster(resp~varb + 0, pred, fam, varb, id, root, data=redata2017,famlist = famlist)
 
 summary(aouta, show.graph=T, info.tol = 1e-10)
 
-aout<- aster(resp~varb + fit:(Region), pred, fam, varb, id, root, data=redata2017, famlist=famlist)
+#include HabitatType in model
+aout<- aster(resp~varb + fit:(HabitatType), pred, fam, varb, id, root, data=redata2017, famlist=famlist)
 
 
 summary(aout, show.graph = TRUE, info.tol=1e-10)
 
-anova(aouta, aout)
+anova(aouta, aout)#HabitatType is significant
+
+aoutb<- aster(resp~varb + fit:(HabitatType + Block.ID), pred, fam, varb, id, root, data=redata2017, famlist=famlist)
+
+summary(aoutb, show.graph=T, info.tol=1e-11)
+
+anova(aouta, aout, aoutb)#block does not add anything.
+
 
 # generate MLE of saturated model mean value parameter vector: mu
 pout<- predict.aster(aout, se.fit=TRUE, info.tol=1e-10)
@@ -155,7 +189,7 @@ pout<- predict.aster(aout, se.fit=TRUE, info.tol=1e-10)
 
 # make data.frame of indivudals for each habitat type (Alvar and Prairie)
 
-fred <- data.frame(Region=levels(redata2017$Region),
+fred <- data.frame(HabitatType=levels(redata2017$HabitatType),
                    Germination.Y.N=1, Survival.Y.N=1,Surv2017=1, No.Flowers.2016=1, Total.Flowers.2017=1, 
                    No.Fruit.2016=1, No.Fruit.2017=1, any.rep=1, sm2017=1, root = 1)
 
@@ -180,16 +214,16 @@ renewdata$fit <- as.numeric(as.character(renewdata$varb) == "sm2017")
 
 
 #Generate fintess estimates and standard errors for each block
-nRegion<- nrow(fred)#all data has same number of blocks so any file will do
+nHab<- nrow(fred)#all data has same number of blocks so any file will do
 nnode<- length(vars)
-amat<- array(0, c(nRegion, nnode, nRegion))
+amat<- array(0, c(nHab, nnode, nHab))
 dim(amat)# makes an 3 x 9 x 3 matrix (2 habitat types and 6 nodes of graphicla model)
 
 #only want means for k'th individual that contribute to expected
 #fitness, and want to add only Seedmass.2016 entries
 
 foo<- grepl("sm2017", vars)
-for(k in 1:nRegion)
+for(k in 1:nHab)
   amat[k, foo, k]<- 1
 
 #check
@@ -201,14 +235,20 @@ pout.amat<- predict(aout, newdata= renewdata, varvar= varb,
 
 #combine estimates with standard error, and then round
 #to three decimal places
-RegionType<- cbind(pout.amat$fit, pout.amat$se.fit)
+Hab<- cbind(pout.amat$fit, pout.amat$se.fit)
 
 
-rownames(RegionType)<- as.character(fred$Region)
+rownames(Hab)<- as.character(fred$HabitatType)
 
 
-colnames(RegionType)<- c("Expected Fitness", "SE")
+colnames(Hab)<- c("Expected Fitness", "SE")
 
 #Expected fitness for each region
-round(RegionType, 3) 
+
+#as block does not explain a sifnificant amount of variation, can omit and used following estimates
+round(Hab, 3) 
+
+
+
+
 
