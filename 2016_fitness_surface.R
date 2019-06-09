@@ -122,7 +122,8 @@ aout1<- aster(resp~varb+0 + fit:Dist.from.cg.km, pred, fam, varb, id, root, data
 
 summary(aout1, show.graph=T, info.tol=1e-11)
 
-aout<- aster(resp~varb+0 + fit:Dist.from.cg.km +fit:No.Days.to.Germ, pred, fam, varb, id, root, data=redata2016, famlist = famlist)
+aout<- aster(resp~varb+Dist.from.cg.km + No.Days.to.Germ + I(Dist.from.cg.km^2) +
+               I(No.Days.to.Germ^2) + I(2*Dist.from.cg.km*No.Days.to.Germ), pred, fam, varb, id, root, data=redata2016, famlist = famlist)
 
 summary(aout, show.graph=T, info.tol=1e-11)
 
@@ -161,26 +162,92 @@ summary(wmout)
 
 #see new aout model on line 125
 
-pout <- predict(aout)
-pout <- matrix(pout, nrow = nrow(aout$x), ncol = ncol(aout$x))
-colnames(pout) <- colnames(aout$x)
-mufit <- pout[, grep("sm", colnames(pout))]
+#extract two coeff
+
+a1 <- aout$coefficients["Dist.from.cg.km"]
+a2 <- aout$coefficients["No.Days.to.Germ"]
+a <- c(a1, a2)
+
+A11 <- aout$coefficients["I(Dist.from.cg.km^2)"]
+A22 <- aout$coefficients["I(No.Days.to.Germ^2)"]
+A12 <- aout$coefficients["I(2 * Dist.from.cg.km * No.Days.to.Germ)"]
+A <- matrix(c(A11, A12, A12, A22), 2, 2)
+
+eigen(A, symmetric = TRUE, only.values = TRUE)$values
 
 
-#only needed when >1 year of data
-#mufit <- apply(mufit, 1, "sum")
-
-#calcualte mean fitness
-wmu <- mufit/mean(mufit)
-
-#perform linear analysis
-wmout <- lm(wmu ~ dat2$No.Days.Germ + dat2$Dist.from.cg.km)
-
-pre_w<- predict(wmout)
-
-summary(wmout)
+max8 <- (-solve(A, a)/2)
+print(max8)
 
 
+#Plot dist from source & days to germ, on fitness contours
+plot(dat2$Dist.from.cg.km, dat2$No.Days.to.Germ, xlab = "Dist.", ylab = "Days to Germ")
+ ufoo <- par("usr")
+ nx <- 101
+ ny <- 101
+ z <- matrix(NA, nx, ny)
+ x <- seq(ufoo[1], ufoo[2], length = nx)
+ y <- seq(ufoo[3], ufoo[4], length = ny)
+ points(max8[1], max8[2], pch = 19)
+ for (i in 1:nx) {
+   for (j in 1:ny) {
+     b <- c(x[i], y[j])
+     z[i, j] <- sum(a * b) + as.numeric(t(b) %*% A %*%
+                                           + b)
+     }
+   }
+ b <- as.numeric(max8)
+ contour(x, y, z, add = TRUE)
+ contour(x, y, z, levels = c(0.325), add = TRUE)
+ 
+ 
+ 
+ 
+ 
+ #OK, cool. But let's be thorough and compare this with the Lande and Arnold (1984) way:
+ 
+ dat2$relfit <- dat2$sm/mean(dat2$sm)
+  lout <- lm(relfit ~ Dist.from.cg.km + No.Days.to.Germ + I(Dist.from.cg.km^2) +
+                I(No.Days.to.Germ^2) + I(2*Dist.from.cg.km*No.Days.to.Germ), data = dat2)
+  summary(lout)
+
+
+  a1 <- lout$coefficients["Dist.from.cg.km"]
+  a2 <- lout$coefficients["No.Days.to.Germ"]
+  a <- c(a1, a2)
+  
+  A11 <- lout$coefficients["I(Dist.from.cg.km^2)"]
+  A22 <- lout$coefficients["I(No.Days.to.Germ^2)"]
+  A12 <- lout$coefficients["I(2 * Dist.from.cg.km * No.Days.to.Germ)"]
+  A <- matrix(c(A11, A12, A12, A22), 2, 2)
+  
+  eigen(A, symmetric = TRUE, only.values = TRUE)$values
+  
+  
+  max8 <- (-solve(A, a)/2)
+  print(max8)
+  
+  
+  #plot OLS (Lande and Arnold) way
+ plot(dat2$Dist.from.cg.km, dat2$No.Days.to.Germ, xlab = "Dist.", ylab = "Days to Germ")
+  ufoo <- par("usr")
+  nx <- 101
+  ny <- 101
+  z <- matrix(NA, nx, ny)
+  x <- seq(ufoo[1], ufoo[2], length = nx)
+  y <- seq(ufoo[3], ufoo[4], length = ny)
+  points(max8[1], max8[2], pch = 19)
+  for (i in 1:nx) {
+    for (j in 1:ny) {
+      b <- c(x[i], y[j])
+      z[i, j] <- sum(a * b) + as.numeric(t(b) %*% A %*%
+                                           + b)
+    }
+  }
+  b <- as.numeric(max8)
+  contour(x, y, z, add = TRUE)
+  contour(x, y, z, levels = c(0.325), add = TRUE)
+  
 
 ######################################################################
 
