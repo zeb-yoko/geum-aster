@@ -7,9 +7,19 @@ library(QGglmm)
 ##new package##
 #install.packages("fitdistrplus")
 library(fitdistrplus)
-df <- read.csv('NV_CG_Experiment-mg.csv')
+##NOTE: Distributions for variables in ASTER analysis taken from there##
+##phenology variables primarily determined in aster-distros script##
+#old datasheet
+#df <- read.csv('NV_CG_Experiment-mg.csv')
+##cleaned data from aster model datasheet in git repo##
+df <- read.csv("full_clean_geum_experiment.csv")
+View(df)
 
-##germination##
+###########################################################
+##INDIVIDUAL MODELS PER TRAIT TO CALCULATE HERITABILITIES##
+###########################################################
+
+##germination##1
 ##############################
 ##check distribution first##
 hist(df$No.Days.to.Germ)
@@ -23,31 +33,45 @@ f1g <- fitdist(germ$No.Days.to.Germ, "pois")
 ##works##
 plot(f1g)
 summary(f1g)
-##germination##
+
+##model statement##
 germ.mod <- glmer(No.Days.to.Germ~Region + (1 | Population) + 
 							(1 | Family.Unique) + (1 | Block.ID), data = df,
 						family=poisson(link=log))
+##View outputs##
 summary(germ.mod)
 hist(residuals(germ.mod))
-##intercept and variance components for QGglmm##
+##pull coefficients: intercept and variance components for QGglmm##
 vars <- as.data.frame(VarCorr(germ.mod))[, c('grp','vcov')]
 intercept <- fixef(germ.mod)['(Intercept)']
+##verify data loaded in to objects##
 vars
+##verify data loaded in to objects##
 intercept
-#latent region mean#
+
+##View latent-scale values region mean##
+##values are for variables from model, not yet converted to observation scale##
+
+##region mean##
 mu <- intercept
+##additive variance NOTE: 4 times value due to half-sibling design##
 va <- 4*vars[vars[["grp"]] == "Family.Unique", "vcov"]
 va
+##total variance in trait##
 vp <- sum(vars[,"vcov"])
 vp
+##Latent-scale narrow-sense heritability##
 lh2 <- va/vp
 lh2
+
+##Run QGparams to convert to observation scale (gives real heritability values)##
 ##put in QGparams##
 herit2 <- QGparams(mu = mu, var.a = va, var.p = vp, model = "Poisson.log")
 ##NOTE: with mu being regional(fixed effect) mean, heritability is calculated as h2 of trait 
-#across all regions, is it worth breaking apart?##
+#across all regions, could be worth breaking apart##
 herit2
-?QGparams
+
+##Create a table to compile heritabilities## 
 col.classes = c("character", "character", "numeric")
 col.names = c("Trait", "Year", "Heritability")
 h2 <-read.table(text = "",colClasses = col.classes, col.names =col.names)
@@ -56,7 +80,7 @@ h2[1,2] <- "2015"
 h2[1,3] <- herit2$h2.obs
 #############################
 
-##trueleaf##
+##trueleaf##2
 #############################
 ##check distribution first##
 hist(df$No.Days.to.TrueLeaf)
@@ -66,131 +90,196 @@ range(df$No.Days.to.TrueLeaf)
 ##for fitdist##
 TrueLeaf <- df[!is.na(df$No.Days.to.TrueLeaf),]
 descdist(log(TrueLeaf$No.Days.to.TrueLeaf), boot = 100)
-f1g <- fitdist(log(TrueLeaf$No.Days.to.TrueLeaf), "lnorm")
-##works##
+f1g <- fitdist(TrueLeaf$No.Days.to.TrueLeaf, "lnorm")
+f2g <- fitdist(TrueLeaf$No.Days.to.TrueLeaf, "pois")
 plot(f1g)
 summary(f1g)
-##TrueLeaf##
+plot(f2g)
+summary(f2g)
+
+##Model Statement##
 TrueLeaf.mod <- glmer(No.Days.to.TrueLeaf~Region + (1 | Population) + 
 							(1 | Family.Unique) + (1 | Block.ID), data = df,
 							 family=poisson(link=log))
-
+##output##
 summary(TrueLeaf.mod)
 hist(residuals(TrueLeaf.mod))
+
 ##intercept and variance components for QGglmm##
 vars <- as.data.frame(VarCorr(TrueLeaf.mod))[, c('grp','vcov')]
 intercept <- fixef(TrueLeaf.mod)['(Intercept)']
+##verify data loaded in to objects##
 vars
+##verify data loaded in to objects##
 intercept
-#latent region mean#
+
+##View latent-scale values region mean##
+##values are for variables from model, not yet converted to observation scale##
+##region mean##
 mu <- intercept
+##additive variance NOTE: 4 times value due to half-sibling design##
 va <- 4*vars[vars[["grp"]] == "Family.Unique", "vcov"]
 va
+##total variance in trait##
 vp <- sum(vars[,"vcov"])
 vp
-#latent scale heritability#
+##Latent-scale narrow-sense heritability##
 lh2 <- va/vp
 lh2
+
+##Run QGparams to convert to observation scale (gives real heritability values)##
 ##put in QGparams##
-herit2 <- QGparams(mu = mu, var.a = va, var.p = vp, model = "Poisson.log")
-##NOTE: with mu being regional(fixed effect) mean, heritability is calculated as h2 of trait 
-#across all regions, is it worth breaking apart?##
+herit2 <- QGparams(mu = mu, var.a = va, var.p = vp, theta = theta, model = "Poisson.log")
+##NOTE: with mu being regional(fixed effect) mean, heritability is calculated as 
+#h2 of trait across all regions, could be worth breaking apart##
 herit2
+
+##Add to Table##
 h2[2,1] <- "TrueLeaf"
 h2[2,2] <- "2015"
 h2[2,3] <- herit2$h2.obs
 h2
 #############################
 
-##DTFF 2016##
+##DTFF 2016##3
 #############################
 ##check distribution first##
-#make date number?
+##remove NAs for descdist##
 flr.16 <- filter(df, Flower.Y.N.2016 >= 1)
-#trueleaf#
 hist(flr.16$no.Planting.to.DTFF)
 FLR <- flr.16[!is.na(flr.16$no.Planting.to.DTFF),]
 descdist(FLR$no.Planting.to.DTFF, boot = 100)
 f1g <- fitdist(FLR$no.Planting.to.DTFF, "pois")
-##works##
+f2g <- fitdist(FLR$no.Planting.to.DTFF, "gamma")
 plot(f1g)
-summary(f1g)
-dtff.mod<- glmer(no.Planting.to.DTFF~Region + (1 | Population) + 
+plot(f2g)
+##Gamma seems best, will need parameters (from fitdistr)##
+g <- fitdistr(FLR$no.Planting.to.DTFF, "gamma")
+g
+k <- g$estimate[1]
+theta <- 1/(g$estimate[2])
+
+##Model Statement##
+dtff.gam <- glmer(no.Planting.to.DTFF~Region + (1 | Population) + 
 					  	(1 | Family.Unique) + (1 | Block.ID), data = flr.16,
-					  family = poisson(link=log))
-hist(residuals(dtff.mod))
-summary(dtff.mod)
-hist(residuals(dtff.mod))
+					  family = Gamma(link=log))
+##model output##
+summary(dtff.gam)
+hist(residuals(dtff.gam))
+dtff.gam
+
 ##intercept and variance components for QGglmm##
-vars <- as.data.frame(VarCorr(dtff.mod))[, c('grp','vcov')]
-intercept <- fixef(dtff.mod)['(Intercept)']
+vars <- as.data.frame(VarCorr(dtff.gam))[, c('grp','vcov')]
+intercept <- fixef(dtff.gam)['(Intercept)']
+##verify data loaded in to objects##
 vars
+##verify data loaded in to objects##
 intercept
-#latent region mean#
+
+##View latent-scale values region mean##
+##values are for variables from model, not yet converted to observation scale##
+##region mean##
 mu <- intercept
-va <-vars[vars[["grp"]] == "Family.Unique", "vcov"]
+##additive variance NOTE: 4 times value due to half-sibling design##
+va <- 4*vars[vars[["grp"]] == "Family.Unique", "vcov"]
 va
+##total variance in trait##
 vp <- sum(vars[,"vcov"])
 vp
-#latent scale heritability#
+##Latent-scale narrow-sense heritability##
 lh2 <- va/vp
 lh2
-##put in QGparams##
-herit2 <- QGparams(mu = mu, var.a = va, var.p = vp, model = "Poisson.log")
-##NOTE: with mu being regional(fixed effect) mean, heritability is calculated as h2 of trait 
-#across all regions, is it worth breaking apart?##
-herit2
-##NOTE--BASICALLY ZERO BECAUSE MODEL EXPLAINS ESSENTIALLY NOTHING##
-library(rptR)
-rpt.dtff<-rptPoisson(formula = no.Planting.to.DTFF~Region + (1 | Population) + 
-							(1 | Family.Unique) + (1 | Block.ID), 
-							grname = c("Fixed", "Block.ID", "Population", "Family.Unique"),
-							data = flr.16, link = "log", nboot =0, ratio =T, adjusted =F)
-rpt.dtff
+
+#################Gamma custom###########
+###IF RUNNING GAMMA DISTRIBUTION, NEED 'CUSTOM' MODEL DESGIN IN QGPARAMS##
+##per wikipedia gamma consists of two parameters: shape parameter (k) and scale (theta)##
+##https://stats.stackexchange.com/questions/96972/how-to-interpret-parameters-in-glm-with-family-gamma
+
+##Pull parameters from fitdistr##
+g <- fitdistr(FLR$no.Planting.to.DTFF, "gamma")
+g
+##Shape parameter (k)##
+k <- g$estimate[1]
+##fitdistr gives rate parameter (beta), which is inverse of scale(theta)##
+##using theta because scale term seems more common##
+theta <- 1/(g$estimate[2])
+e <- exp(1)
+##define functions for QGparams##
+inv.link <- function(x){exp(x)}
+var.func <- function(x){k*theta^2}
+d.inv.link <- function(x){e^(x)}
+custom.functions <- list(inv.link =inv.link, var.func=var.func,
+									d.inv.link = d.inv.link)
+herit.gam <- QGparams(mu = mu, var.a = va, var.p = vp, 
+							 custom.model = custom.functions) 
+herit.gam
+
 h2[3,1] <- "Date to first flower"
 h2[3,2] <- "2016"
-h2[3,3] <- 0
+h2[3,3] <- herit.gam$h2.obs
 h2
 ############################
 
-##No. flowers 2016##
+##No. flowers 2016##4
 ############################
 n.flr.mod <- glmer(No.Flowers.2016~Region + (1 | Population) + 
 						 	(1 | Family.Unique) + (1 | Block.ID), data = df,
-						 family=poisson(link=log))
+						 family=neg.bin(theta = 1.12571436))
+n.flr.mod2 <- glmer.nb(No.Flowers.2016~Region + (1 | Population) + 
+						 	(1 | Family.Unique) + (1 | Block.ID), data = df)
+n.flr.mod2
+n.flr.mod3 <- glmer(No.Flowers.2016~Region + (1 | Population) + 
+						 	(1 | Family.Unique) + (1 | Block.ID), data = df,
+						 family=neg.bin(theta = 0.1874))
+hist(residuals(n.flr.mod3))
+hist(residuals(n.flr.mod2))
 hist(residuals(n.flr.mod))
 
 vars <- as.data.frame(VarCorr(n.flr.mod))[, c('grp','vcov')]
 intercept <- fixef(n.flr.mod)['(Intercept)']
+##verify data loaded in to objects##
 vars
+##verify data loaded in to objects##
 intercept
-#latent region mean#
+
+##View latent-scale values region mean##
+##values are for variables from model, not yet converted to observation scale##
+theta <-  1.12571436
+##region mean##
 mu <- intercept
+##additive variance NOTE: 4 times value due to half-sibling design##
 va <- 4*vars[vars[["grp"]] == "Family.Unique", "vcov"]
 va
+##total variance in trait##
 vp <- sum(vars[,"vcov"])
 vp
-#latent scale heritability#
+##Latent-scale narrow-sense heritability##
 lh2 <- va/vp
 lh2
+
+##Run QGparams to convert to observation scale (gives real heritability values)##
 ##put in QGparams##
-herit2 <- QGparams(mu = mu, var.a = va, var.p = vp, model = "Poisson.log")
+herit2 <- QGparams(mu = mu, var.a = va, var.p = vp, theta = theta, model = "negbin.log")
 ##NOTE: with mu being regional(fixed effect) mean, heritability is calculated as h2 of trait 
-#across all regions, is it worth breaking apart?##
+#across all regions, could be worth breaking apart##
 herit2
-rpt.dtff<-rptPoisson(formula = No.Flowers.2016~Region + (1 | Population) + 
-								(1 | Family.Unique) + (1 | Block.ID), 
-							grname = c("Fixed", "Block.ID", "Population", "Family.Unique"),
-							data = flr.16, link = "log", nboot =0, ratio =T, adjusted =F)
-rpt.dtff
-##NOTE--BASICALLY ZERO BECAUSE MODEL EXPLAINS ESSENTIALLY NOTHING##
+
+##Run rptPoisson to see how much variance explained by model effects##
+#rpt.nflr<-rptPoisson(formula = No.Flowers.2016~Region + (1 | Population) + 
+#								(1 | Family.Unique) + (1 | Block.ID), 
+#							grname = c("Fixed", "Block.ID", "Population", "Family.Unique"),
+#							data = flr.16, link = "log", nboot =0, ratio =T, adjusted =F)
+#rpt.nflr
+
+##NOTE--With Negative binomial and theta from Mason--residuals Bad##
+
 h2[4,1] <- "Number of Flowers"
 h2[4,2] <- "2016"
-h2[4,3] <- 0
+h2[4,3] <- herit2$h2.obs
 h2
 ###########################
 
-##Number of fruit 2016##
+##Number of fruit 2016##5
 ###########################
 hist(df$No.Fruit.2016)
 df1 <- filter(df, No.Fruit.2016 >= 0)
@@ -199,32 +288,48 @@ f1g <- fitdist(df1$No.Fruit.2016, "pois")
 plot(f1g)
 n.fruit.mod <- glmer(No.Fruit.2016~Region + (1 | Population) + 
 								(1 | Family.Unique) + (1 | Block.ID), data = df1,
-							family=poisson(link=log))
+							family=neg.bin(theta = 3.5074887))
 n.fruit.out <-	summary(n.fruit.mod)
 n.fruit.out
 #store residuals
 n.fruit.resid <- residuals(n.fruit.mod)
-rpt.dtff<-rptPoisson(formula = No.Fruit.2016~Region + (1 | Population) + 
-								(1 | Family.Unique) + (1 | Block.ID), 
-							grname = c("Fixed", "Block.ID", "Population", "Family.Unique"),
-							data = flr.16, link = "log", nboot =0, ratio =T, adjusted =F)
-rpt.dtff
+
 vars <- as.data.frame(VarCorr(n.fruit.mod))[, c('grp','vcov')]
 intercept <- fixef(n.fruit.mod)['(Intercept)']
+
+##verify data loaded in to objects##
 vars
+##verify data loaded in to objects##
 intercept
-#latent region mean#
+
+##View latent-scale values region mean##
+##values are for variables from model, not yet converted to observation scale##
+theta <- 3.5074887
+##region mean##
 mu <- intercept
+##additive variance NOTE: 4 times value due to half-sibling design##
 va <- 4*vars[vars[["grp"]] == "Family.Unique", "vcov"]
 va
+##total variance in trait##
 vp <- sum(vars[,"vcov"])
 vp
-#latent scale heritability#
+##Latent-scale narrow-sense heritability##
 lh2 <- va/vp
 lh2
+
+##Run QGparams to convert to observation scale (gives real heritability values)##
 ##put in QGparams##
-herit2 <- QGparams(mu = mu, var.a = va, var.p = vp, model = "Poisson.log")
+herit2 <- QGparams(mu = mu, var.a = va, var.p = vp, theta = theta, model = "negbin.log")
+##NOTE: with mu being regional(fixed effect) mean, heritability is calculated as h2 of trait 
+#across all regions, could be worth breaking apart##
 herit2
+
+#rpt.nfruit<-rptPoisson(formula = No.Fruit.2016~Region + (1 | Population) + 
+#								(1 | Family.Unique) + (1 | Block.ID), 
+#							grname = c("Fixed", "Block.ID", "Population", "Family.Unique"),
+#							data = flr.16, link = "log", nboot =0, ratio =T, adjusted =F)
+#rpt.nfruit
+
 ##add to table
 h2[5,1] <- "Number of Fruit"
 h2[5,2] <- "2016"
@@ -232,51 +337,64 @@ h2[5,3] <- herit2$h2.obs
 h2
 ###########################
 
-##Seedmass 2016##
+##Seedmass 2016##6
 ###########################
+View(df)
 hist(df$sm)
-hist(df1$sm)
+hist(df1$Seedmass.2016)
 df1<-df[!is.na(df$sm),]
+hist(df1$sm)
 f1g <- fitdist(df1$sm, "pois")
 f1g <- fitdist(df1$sm, "nbinom")
 plot(f1g)
-n.seed.mod <- glmer.nb(Seedmass16.mg~Region + (1 | Population) + 
-						  	(1 | Family.Unique) + (1 | Block.ID), data = df1)#,
+n.seed.mod <- glmer(sm~Region + (1 | Population) + 
+						  	(1 | Family.Unique) + (1 | Block.ID), data = df1,
+							family = neg.bin(theta = 1.0341103))
 n.seed.out <-	summary(n.seed.mod)
 n.seed.out
+n.seed.mod2 <- glmer.nb(Seedmass16.mg~Region + (1 | Population) + 
+							  	(1 | Family.Unique) + (1 | Block.ID), data = df1)#,
+n.seed.out2 <-	summary(n.seed.mod2)
+
+n.seed.out
 hist(residuals(n.seed.mod))
-rpt.seedmass<-rpt(formula = Seedmass16.mg~Region + (1 | Population) + 
-				  	(1 | Family.Unique) + (1 | Block.ID), 
-							grname = c("Fixed", "Block.ID", "Population", "Family.Unique"),
-							data = df1, datatype = "nbinom", link = "log", nboot =0, ratio =T, adjusted =F)
-rpt.seedmass
+##negbin is not a datatype rptR works with##
+#rpt.seedmass<-rpt(formula = sm~Region + (1 | Population) + 
+#				  	(1 | Family.Unique) + (1 | Block.ID), 
+#							grname = c("Fixed", "Block.ID", "Population", "Family.Unique"),
+#							data = df1, datatype = "nbinom", link = "log", nboot =0, ratio =T, adjusted =F)
+#rpt.seedmass
 vars <- as.data.frame(VarCorr(n.seed.mod))[, c('grp','vcov')]
 intercept <- fixef(n.seed.mod)['(Intercept)']
 vars
 intercept
-theta <- 1.5239
-#latent region mean#
+##Negative binomial needs additional (dispersion) parameter, theta##
+theta <- 1.0341103
+##latent region mean##
 mu <- intercept
+##Additive Variance--note 4x for half-sib design##
 va <- 4*vars[vars[["grp"]] == "Family.Unique", "vcov"]
 va
+##Total variance##
 vp <- sum(vars[,"vcov"])
 vp
-#latent scale heritability#
+##latent scale narrow-sense heritability##
 lh2 <- va/vp
 lh2
-##put in QGparams##
+
+##put in QGparams--get observed scale h2##
 herit2 <- QGparams(mu = mu, var.a = va, var.p = vp, theta = theta, model = "negbin.log")
 herit2
 ##add to table
 h2[6,1] <- "Seedmass"
 h2[6,2] <- "2016"
-h2[6,3] <- herit2$h2.obs
+h2[6,3] <- 0  #herit2$h2.obs
 h2
 ###########################
 
 ########2017 Season#############
 
-##DTFF 2017##
+##DTFF 2017##7
 ###########################
 flr.17 <- filter(df, Flower.Y.N.2017 >= 1)
 hist(df$DTFF.Ordinal.Day.2017)
@@ -286,28 +404,81 @@ flr.17$DTFF.Ordinal.Day.2017 <-as.numeric(flr.17$DTFF.Ordinal.Day.2017)
 flr.17 <- filter(df, Flower.Y.N.2017 >= 1)
 hist(flr.17$DTFF.Ordinal.Day.2017)
 flr17 <- flr.17[!is.na(flr.17$DTFF.Ordinal.Day.2017),]
+descdist(flr17$DTFF.Ordinal.Day.2017)
 f1g <- fitdist(flr17$DTFF.Ordinal.Day.2017, "norm")
 f2g <- fitdist(flr17$DTFF.Ordinal.Day.2017, "pois")
+f3g <- fitdist(flr17$DTFF.Ordinal.Day.2017, "gamma")
+f4g <- fitdist(flr17$DTFF.Ordinal.Day.2017, "nbinom")
+f5g <- fitdistr(flr17$DTFF.Ordinal.Day.2017, "Poisson")
+f5g
+plot(f1g)
+plot(f2g)
+plot(f3g)
+plot(f4g)
 dtff.mod<- glmer(DTFF.Ordinal.Day.2017~Region + (1 | Population) + 
 					  	(1 | Family.Unique) + (1 | Block.ID), data = flr.17,
 					  ##first day = 107
-					  family = poisson(link=log))
+					  family = Gamma(link=log))
 hist(residuals(dtff.mod))
-rpt.dtff<-rptPoisson(formula = DTFF.Ordinal.Day.2017~Region + (1 | Population) + 
-								(1 | Family.Unique) + (1 | Block.ID), 
-							grname = c("Fixed", "Block.ID", "Population", "Family.Unique"),
-							data = flr.17, link = "log", nboot =0, ratio =T, adjusted =F)
-rpt.dtff
-##NOTE--BASICALLY ZERO BECAUSE MODEL EXPLAINS ESSENTIALLY NOTHING##
+dtff.mod<- glmer(DTFF.Ordinal.Day.2017~Region + (1 | Population) + 
+					  	(1 | Family.Unique) + (1 | Block.ID), data = flr.17,
+					  ##first day = 107
+					  family = Gamma(link=log))
 
+
+##intercept and variance components for QGglmm##
+vars <- as.data.frame(VarCorr(dtff.mod))[, c('grp','vcov')]
+intercept <- fixef(dtff.mod)['(Intercept)']
+##verify data loaded in to objects##
+vars
+##verify data loaded in to objects##
+intercept
+
+##View latent-scale values region mean##
+##values are for variables from model, not yet converted to observation scale##
+##region mean##
+mu <- intercept
+##additive variance NOTE: 4 times value due to half-sibling design##
+va <- 4*vars[vars[["grp"]] == "Family.Unique", "vcov"]
+va
+##total variance in trait##
+vp <- sum(vars[,"vcov"])
+vp
+##Latent-scale narrow-sense heritability##
+lh2 <- va/vp
+lh2
+
+#################Gamma custom###########
+###IF RUNNING GAMMA DISTRIBUTION, NEED 'CUSTOM' MODEL DESGIN IN QGPARAMS##
+##per wikipedia gamma consists of two parameters: shape parameter (k) and scale (theta)##
+##https://stats.stackexchange.com/questions/96972/how-to-interpret-parameters-in-glm-with-family-gamma
+
+##Pull parameters from fitdistr##
+g <- fitdistr(flr17$DTFF.Ordinal.Day.2017, "gamma")
+g
+##Shape parameter (k)##
+k <- g$estimate[1]
+##fitdistr gives rate parameter (beta), which is inverse of scale(theta)##
+##using theta because scale term seems more common##
+theta <- 1/(g$estimate[2])
+e <- exp(1)
+##define functions for QGparams##
+inv.link <- function(x){exp(x)}
+var.func <- function(x){k*theta^2}
+d.inv.link <- function(x){e^(x)}
+custom.functions <- list(inv.link =inv.link, var.func=var.func,
+								 d.inv.link = d.inv.link)
+herit.gam <- QGparams(mu = mu, var.a = va, var.p = vp, 
+							 custom.model = custom.functions) 
+herit.gam
 ##add to table
 h2[7,1] <- "Date to First Flower"
 h2[7,2] <- "2017"
-h2[7,3] <- 0
+h2[7,3] <- herit.gam$h2.obs
 h2
 ###########################
 
-##Date to bolt 2017##
+##Date to bolt 2017##8
 ###########################
 flr.17 <- filter(df, Flower.Y.N.2017 >= 1)
 hist(df$DtB.O.Day.2017)
@@ -317,7 +488,7 @@ f1g <- fitdist(flr17$DtB.O.Day.2017, "norm")
 f2g <- fitdist(flr17$DtB.O.Day.2017, "pois")
 plot(f1g)
 plot(f2g)
-##model##
+##model statement##
 dtb.mod<- glmer(DtB.O.Day.2017~Region + (1 | Population) + 
 					 	(1 | Family.Unique) + (1 | Block.ID), data = flr.17,
 					 ##first day = ~114
@@ -330,20 +501,33 @@ rpt.dtb<-rpt(formula = DtB.O.Day.2017~Region + (1 | Population) +
 rpt.dtb
 vars <- as.data.frame(VarCorr(dtb.mod))[, c('grp','vcov')]
 intercept <- fixef(dtb.mod)['(Intercept)']
+##verify data loaded in to objects##
 vars
+##verify data loaded in to objects##
 intercept
-#latent region mean#
+
+##View latent-scale values region mean##
+##values are for variables from model, not yet converted to observation scale##
+
+##region mean##
 mu <- intercept
+##additive variance NOTE: 4 times value due to half-sibling design##
 va <- 4*vars[vars[["grp"]] == "Family.Unique", "vcov"]
 va
+##total variance in trait##
 vp <- sum(vars[,"vcov"])
 vp
-#latent scale heritability#
+##Latent-scale narrow-sense heritability##
 lh2 <- va/vp
 lh2
+
+##Run QGparams to convert to observation scale (gives real heritability values)##
 ##put in QGparams##
 herit2 <- QGparams(mu = mu, var.a = va, var.p = vp, theta = theta, model = "negbin.log")
+##NOTE: with mu being regional(fixed effect) mean, heritability is calculated as h2 of trait 
+#across all regions, could be worth breaking apart##
 herit2
+
 ##add to table
 h2[8,1] <- "Date to bolt"
 h2[8,2] <- "2017"
@@ -351,7 +535,7 @@ h2[8,3] <- herit2$h2.obs
 h2
 ###########################
 
-##Date to Fruit##
+##Date to Fruit##9
 ###########################
 flr.17 <- filter(df, Flower.Y.N.2017 >= 1)
 hist(log(df$Fruit.O.Day.2017))
@@ -359,147 +543,366 @@ flr17 <- flr.17[!is.na(flr.17$Fruit.O.Day.2017),]
 flr.17$Fruit.O.Day.2017 <-as.numeric(flr.17$Fruit.O.Day.2017)
 f1g <- fitdist(flr17$Fruit.O.Day.2017, "norm")
 f2g <- fitdist(flr17$Fruit.O.Day.2017, "pois")
+f3g <- fitdist(flr17$Fruit.O.Day.2017, "gamma")
 plot(f1g)
 plot(f2g)
+plot(f3g)
+###################Gamma model######
 dtfr.mod<- glmer(Fruit.O.Day.2017~Region + (1 | Population) + 
 					  	(1 | Family.Unique) + (1 | Block.ID), data = flr17,
 					  ##first day = ~121
-					  family = poisson(link=log))
-rpt.dtfr<-rptPoisson(formula = Fruit.O.Day.2017~Region + (1 | Population) + 
-						  	(1 | Family.Unique) + (1 | Block.ID), 
-						  grname = c("Fixed", "Block.ID", "Population", "Family.Unique"),
-						  data = flr17, link = "log", nboot =0, ratio =T, adjusted =F)
-rpt.dtfr
+					  family = Gamma(link=log))
+
+hist(residuals(dtfr.mod))
 vars <- as.data.frame(VarCorr(dtfr.mod))[, c('grp','vcov')]
 intercept <- fixef(dtfr.mod)['(Intercept)']
+##verify data loaded in to objects##
 vars
+##verify data loaded in to objects##
 intercept
-#latent region mean#
+
+##View latent-scale values region mean##
+##values are for variables from model, not yet converted to observation scale##
+
+##region mean##
 mu <- intercept
+##additive variance NOTE: 4 times value due to half-sibling design##
 va <- 4*vars[vars[["grp"]] == "Family.Unique", "vcov"]
 va
+##total variance in trait##
 vp <- sum(vars[,"vcov"])
 vp
-#latent scale heritability#
+##Latent-scale narrow-sense heritability##
 lh2 <- va/vp
 lh2
+
+##Run QGparams to convert to observation scale (gives real heritability values)##
 ##put in QGparams##
-herit2 <- QGparams(mu = mu, var.a = va, var.p = vp,  model = "Poisson.log")
-herit2
+#################Gamma custom###########
+###IF RUNNING GAMMA DISTRIBUTION, NEED 'CUSTOM' MODEL DESGIN IN QGPARAMS##
+##per wikipedia gamma consists of two parameters: shape parameter (k) and scale (theta)##
+##https://stats.stackexchange.com/questions/96972/how-to-interpret-parameters-in-glm-with-family-gamma
+
+##Pull parameters from fitdistr##
+g <- fitdistr(flr17$Fruit.O.Day.2017, "gamma")
+g
+##Shape parameter (k)##
+k <- g$estimate[1]
+##fitdistr gives rate parameter (beta), which is inverse of scale(theta)##
+##using theta because scale term seems more common##
+theta <- 1/(g$estimate[2])
+e <- exp(1)
+##define functions for QGparams##
+inv.link <- function(x){exp(x)}
+var.func <- function(x){k*theta^2}
+d.inv.link <- function(x){e^(x)}
+custom.functions <- list(inv.link =inv.link, var.func=var.func,
+								 d.inv.link = d.inv.link)
+herit.gam <- QGparams(mu = mu, var.a = va, var.p = vp, 
+							 custom.model = custom.functions) 
+herit.gam
 ##add to table
 h2[9,1] <- "Date to fruit"
 h2[9,2] <- "2017"
-h2[9,3] <- herit2$h2.obs
+h2[9,3] <- herit.gam$h2.obs
 h2
 ###########################
 
-##Seedmass 2017##
-###########################
-flr.17 <- filter(df, Seedmass17.mg >=1)
+##No. flowers 2017##10
+############################
+flr.17 <- filter(df, Total.Flowers.2017 >=1)
 #View(flr.17)
-hist(df$Seedmass17.mg)
-summary(df$Seedmass17.mg)
-flr17 <- flr.17[!is.na(flr.17$Seedmass17.mg),]
-f1g <- fitdist(flr17$Seedmass17.mg, "norm")
-f2g <- fitdist(flr17$Seedmass17.mg, "pois")
-f3g <- fitdist(flr17$Seedmass17.mg, "nbinom")
+flr17 <- df[!is.na(df$Total.Flowers.2017),]
+hist(flr17$Total.Flowers.2017)
+f1g <- fitdist(flr17$Total.Flowers.2017, "norm")
+f2g <- fitdist(flr17$Total.Flowers.2017, "pois")
+f3g <- fitdist(flr17$Total.Flowers.2017, "nbinom")
+plot(f1g)
+plot(f2g)
+plot(f3g)
+fitdistr(flr17$Total.Flowers.2017, "negative binomial")
+
+n.flr.mod <- glmer(Total.Flowers.2017~Region + (1 | Population) + 
+						 	(1 | Family.Unique) + (1 | Block.ID), data = flr17,
+						 family=neg.bin(theta = .296))
+hist(residuals(n.flr.mod))
+
+vars <- as.data.frame(VarCorr(n.flr.mod))[, c('grp','vcov')]
+intercept <- fixef(n.flr.mod)['(Intercept)']
+##verify data loaded in to objects##
+vars
+##verify data loaded in to objects##
+intercept
+
+##View latent-scale values region mean##
+##values are for variables from model, not yet converted to observation scale##
+theta <-  1.12571436
+##region mean##
+mu <- intercept
+##additive variance NOTE: 4 times value due to half-sibling design##
+va <- 4*vars[vars[["grp"]] == "Family.Unique", "vcov"]
+va
+##total variance in trait##
+vp <- sum(vars[,"vcov"])
+vp
+##Latent-scale narrow-sense heritability##
+lh2 <- va/vp
+lh2
+
+##Run QGparams to convert to observation scale (gives real heritability values)##
+##put in QGparams##
+herit2 <- QGparams(mu = mu, var.a = va, var.p = vp, theta = theta, model = "negbin.log")
+##NOTE: with mu being regional(fixed effect) mean, heritability is calculated as h2 of trait 
+#across all regions, could be worth breaking apart##
+herit2
+
+##NOTE--With Negative binomial and theta from Mason--residuals ok--model failed to converge##
+
+h2[10,1] <- "Number of Flowers"
+h2[10,2] <- "2017"
+h2[10,3] <- herit2$h2.obs
+h2
+############################
+
+##No. fruit 2017##11
+############################
+flr.17 <- filter(df, No.Fruit.2017 >=1)
+#View(flr.17)
+flr17 <- df[!is.na(df$No.Fruit.2017),]
+summary(flr17$No.Fruit.2017)
+hist(flr17$No.Fruit.2017)
+f1g <- fitdistr(flr17$No.Fruit.2017, "normal")
+f2g <- fitdistr(flr17$No.Fruit.2017, "poisson")
+f3g <- fitdistr(flr17$No.Fruit.2017, "negative binomial")
+AIC(f1g,f2g,f3g)
+n.frt.mod <- glmer(No.Fruit.2017~Region + (1 | Population) + 
+						 	(1 | Family.Unique) + (1 | Block.ID), data = flr17,
+						 family=neg.bin(theta = .237))
+
+hist(residuals(n.frt.mod))
+
+vars <- as.data.frame(VarCorr(n.frt.mod))[, c('grp','vcov')]
+intercept <- fixef(n.frt.mod)['(Intercept)']
+##verify data loaded in to objects##
+vars
+##verify data loaded in to objects##
+intercept
+
+##View latent-scale values region mean##
+##values are for variables from model, not yet converted to observation scale##
+theta <-  0.237
+##region mean##
+mu <- intercept
+##additive variance NOTE: 4 times value due to half-sibling design##
+va <- 4*vars[vars[["grp"]] == "Family.Unique", "vcov"]
+va
+##total variance in trait##
+vp <- sum(vars[,"vcov"])
+vp
+##Latent-scale narrow-sense heritability##
+lh2 <- va/vp
+lh2
+
+##Run QGparams to convert to observation scale (gives real heritability values)##
+##put in QGparams##
+herit2 <- QGparams(mu = mu, var.a = va, var.p = vp, theta = theta, model = "negbin.log")
+##NOTE: with mu being regional(fixed effect) mean, heritability is calculated as h2 of trait 
+#across all regions, could be worth breaking apart##
+herit2
+
+##NOTE--With Negative binomial and theta from Mason--residuals ok--model failed to converge##
+
+h2[11,1] <- "Number of Fruit"
+h2[11,2] <- "2017"
+h2[11,3] <- herit2$h2.obs
+h2
+###########################
+
+##Seedmass 2017##12
+###########################
+flr.17 <- filter(df, sm2017 >=1)
+#View(flr.17)
+hist(flr17$sm2017)
+summary(flr17$sm2017)
+flr17 <- df[!is.na(df$sm2017),]
+f1g <- fitdist(flr17$sm2017, "norm")
+f2g <- fitdist(flr17$sm2017, "pois")
+f3g <- fitdist(flr17$sm2017, "nbinom")
+##0s included##
+tdist <- fitdistr(flr17$sm2017, "negative binomial")
+tdist
+##0s filtered out##
+distro <- fitdistr(flr.17$sm2017, "negative binomial")
+distro
 plot(f1g)
 plot(f2g)
 plot(f3g)
 ##negative binomial rather than poisson, bc density on right tail high##
 ##when ran glmer.nb: Negative Binomial(1.347)  ( log )##
-seed17.mod<- glmer(Seedmass17.mg~1 +Region + (1 | Population) + 
+seed17.mod<- glmer(sm2017~Region + (1 | Population) + 
 						  	(1 | Family.Unique) + (1 | Block.ID), data = flr.17,
-						  family = negative.binomial(1.347))
+								##with all 0s included theta = 0.084
+						 		##with 0s removed, theta = .91700637
+						 		 family = negative.binomial(0.917))
 summary(seed17.mod)
 hist(residuals(seed17.mod))
-rpt.seed17<-rpt(formula = DtB.O.Day.2017~Region + (1 | Population) + 
-				 	(1 | Family.Unique) + (1 | Block.ID), 
-				 grname = c("Fixed", "Block.ID", "Population", "Family.Unique"),
-				 data = flr17,  datatype = "nbinom", link = "log", nboot =0, ratio =T, adjusted =F)
-rpt.seed17
-?rptR
+
+
+##pull data from model##
 vars <- as.data.frame(VarCorr(seed17.mod))[, c('grp','vcov')]
 intercept <- fixef(seed17.mod)['(Intercept)']
 vars
 intercept
-theta <- 1.347
-#latent region mean#
+##additonal negative binomial parameter##
+theta <- 0.917
+
+##latent region mean##
 mu <- intercept
 va <- 4*vars[vars[["grp"]] == "Family.Unique", "vcov"]
 va
 vp <- sum(vars[,"vcov"])
 vp
-#latent scale heritability#
+
+##latent scale heritability##
 lh2 <- va/vp
 lh2
-##put in QGparams##
+
+##put in QGparams--get observed scale h2##
 herit2 <- QGparams(mu = mu, var.a = va, var.p = vp, theta = theta, model = "negbin.log")
 herit2
+
 ##add to table
-h2[10,1] <- "Seedmass (mg)"
-h2[10,2] <- "2017"
-h2[10,3] <- herit2$h2.obs
+h2[12,1] <- "Seedmass (mg)"
+h2[12,2] <- "2017"
+h2[12,3] <- herit2$h2.obs
 h2
-###########################
+##############################
 
 ########2018 Season###########
 
-##DTFF##
+##DTFF##13
 ###########################
-flr.18 <- filter(df, Flowering.Y.N.2018 >= 1)
 hist(df$DTFF.18.Oday)
-hist(flr.18$DTFF.18.Oday)
-flr18 <- flr.18[!is.na(flr.18$DTFF.18.Oday),]
+flr18 <- df[!is.na(df$DTFF.18.Oday),]
+descdist(flr18$DTFF.18.Oday, boot = 100)
 f1g <- fitdist(flr18$DTFF.18.Oday, "norm")
 f2g <- fitdist(flr18$DTFF.18.Oday, "pois")
+f3g <- fitdist(flr18$DTFF.18.Oday, "gamma")
+f4g <- fitdist(flr18$DTFF.18.Oday, "lnorm")
 plot(f1g)
 plot(f2g)
+plot(f3g)
+plot(f4g)
 
+f1 <- fitdistr(flr18$DTFF.18.Oday, "normal")
+f2 <- fitdistr(flr18$DTFF.18.Oday, "Poisson")
+f3 <- fitdistr(flr18$DTFF.18.Oday, "gamma")
+f4 <- fitdistr(flr18$DTFF.18.Oday, "lognormal")
+f5 <- fitdistr(flr18$DTFF.18.Oday, "negative binomial")
+AIC(f1,f2,f3,f4)
+
+##model statement##
 dtff18.mod<- glmer(DTFF.18.Oday~Region + (1 | Population) + 
-						 	(1 | Family.Unique) + (1 | Block.ID), data = flr.18,
-						 family = poisson(link = log))
+						 	(1 | Family.Unique) + (1 | Block.ID), data = flr18,
+						 family = Gamma(link = log))
 summary(dtff18.mod)
 hist(residuals(dtff18.mod))
+
 vars <- as.data.frame(VarCorr(dtff18.mod))[, c('grp','vcov')]
 intercept <- fixef(dtff18.mod)['(Intercept)']
+
+##verify data loaded in to objects##
 vars
+##verify data loaded in to objects##
 intercept
-#latent region mean#
+
+##View latent-scale values region mean##
+##values are for variables from model, not yet converted to observation scale##
+
+##region mean##
 mu <- intercept
+##additive variance NOTE: 4 times value due to half-sibling design##
 va <- 4*vars[vars[["grp"]] == "Family.Unique", "vcov"]
 va
+##total variance in trait##
 vp <- sum(vars[,"vcov"])
 vp
-#latent scale heritability#
+##Latent-scale narrow-sense heritability##
 lh2 <- va/vp
 lh2
+
+#################Gamma custom###########
+###IF RUNNING GAMMA DISTRIBUTION, NEED 'CUSTOM' MODEL DESGIN IN QGPARAMS##
+##per wikipedia gamma consists of two parameters: shape parameter (k) and scale (theta)##
+##https://stats.stackexchange.com/questions/96972/how-to-interpret-parameters-in-glm-with-family-gamma
+
+##Pull parameters from fitdistr##
+g <- fitdistr(flr18$DTFF.18.Oday, "gamma")
+g
+##Shape parameter (k)##
+k <- g$estimate[1]
+##fitdistr gives rate parameter (beta), which is inverse of scale(theta)##
+##using theta because scale term seems more common##
+theta <- 1/(g$estimate[2])
+e <- exp(1)
+##define functions for QGparams##
+inv.link <- function(x){exp(x)}
+var.func <- function(x){k*theta^2}
+d.inv.link <- function(x){e^(x)}
+custom.functions <- list(inv.link =inv.link, var.func=var.func,
+								 d.inv.link = d.inv.link)
+herit.gam <- QGparams(mu = mu, var.a = va, var.p = vp, 
+							 custom.model = custom.functions) 
+herit.gam
+##Run QGparams to convert to observation scale (gives real heritability values)##
 ##put in QGparams##
-herit2 <- QGparams(mu = mu, var.a = va, var.p = vp,  model = "Poisson.log")
-herit2
+
 ##add to table
-h2[11,1] <- "Date to first flower"
-h2[11,2] <- "2018"
-h2[11,3] <- herit2$h2.obs
+h2[13,1] <- "Date to first flower"
+h2[13,2] <- "2018"
+h2[13,3] <- herit.gam$h2.obs
 h2
 ###########################
 
-##Date to bolt##
+##Date to bolt##14
 ###########################
 flr.18 <- filter(df, Flowering.Y.N.2018 >= 1)
 hist(df$DtB.Oday.2018)
 flr18 <- flr.18[!is.na(flr.18$DtB.Oday.2018),]
-f1g <- fitdist(flr18$DtB.Oday.2018, "norm")
-f2g <- fitdist(flr18$DtB.Oday.2018, "pois")
-
-##Roughly normal-NOT poisson##
+f1g <- fitdistr(flr18$DtB.Oday.2018, "normal")
+f2g <- fitdistr(flr18$DtB.Oday.2018, "poisson")
+#f3g <- fitdistr(flr18$DtB.Oday.2018, "negative binomial")
+f4g <- fitdistr(flr18$DtB.Oday.2018, "Gamma")
+f1g
+AIC(f1g, f2g, f4g)
+plot(f1g)
+plot(f2g)
+##Roughly normal? OR poisson??##
 dtb18.mod<- glmer(DtB.Oday.2018~Region + (1 | Population) + 
 							(1 | Family.Unique) + (1 | Block.ID), data = flr18,
-						##went with (neg) Gamma dist
-						family = poisson(link=log))
+							family = gaussian)
 dtb18.out <-	summary(dtb18.mod)
 dtb18.out
 hist(residuals(dtb18.mod))
+
+##look at fitted values vs original data##
+plot(fitted(dtb18.mod),flr18$DtB.Oday.2018)
+##check correlation of data##
+cor(fitted(dtb18.mod),flr18$DtB.Oday.2018)
+##other models:##
+dtb18.mod2<- glmer(DtB.Oday.2018~Region + (1 | Population) + 
+							(1 | Family.Unique) + (1 | Block.ID), data = flr18,
+						family = poisson(link = "log"))
+dtb18.out2 <-	summary(dtb18.mod2)
+dtb18.out2
+hist(residuals(dtb18.mod2))
+
+dtb18.mod3<- glmer(DtB.Oday.2018~Region + (1 | Population) + 
+						 	(1 | Family.Unique) + (1 | Block.ID), data = flr18,
+						 family = Gamma(link = "log"))
+dtb18.out3 <-	summary(dtb18.mod3)
+dtb18.out3
+hist(residuals(dtb18.mod3))
 
 vars <- as.data.frame(VarCorr(dtb18.mod))[, c('grp','vcov')]
 intercept <- fixef(dtb18.mod)['(Intercept)']
@@ -515,36 +918,42 @@ vp
 lh2 <- va/vp
 lh2
 ##put in QGparams##
-herit2 <- QGparams(mu = mu, var.a = va, var.p = vp,  model = "Poisson.log")
+herit2 <- QGparams(mu = mu, var.a = va, var.p = vp,  model = "Gaussian")
 herit2
 ##add to table
-h2[12,1] <- "Date to bolt"
-h2[12,2] <- "2018"
-h2[12,3] <- herit2$h2.obs
+h2[14,1] <- "Date to bolt"
+h2[14,2] <- "2018"
+h2[14,3] <- herit2$h2.obs
 h2
 ###########################
 
-##Date to Fruit 2018##
+##Date to Fruit 2018##15
 ###########################
 flr.18 <- filter(df, Flowering.Y.N.2018 >= 1)
 hist(flr.18$Date.to.Fruit.Oday.2018)
 flr18 <- flr.18[!is.na(flr.18$Date.to.Fruit.Oday.2018),]
 f1g <- fitdist(flr18$Date.to.Fruit.Oday.2018, "norm")
 f2g <- fitdist(flr18$Date.to.Fruit.Oday.2018, "pois")
+f3g <- fitdist(flr18$Date.to.Fruit.Oday.2018, "gamma")
 plot(f1g)
 plot(f2g)
+plot(f3g)
+f1 <- fitdistr(flr18$Date.to.Fruit.Oday.2018, "normal")
+f2 <- fitdistr(flr18$Date.to.Fruit.Oday.2018, "poisson")
+f3 <- fitdistr(flr18$Date.to.Fruit.Oday.2018, "gamma")
+AIC(f1, f2, f3)
 
 dtfr18.mod<- glmer(Date.to.Fruit.Oday.2018~Region + (1 | Population) + 
 						 	(1 | Family.Unique) + (1 | Block.ID), data = flr18,
-						 family = poisson(link=log))
-dtfr18.mod2<- lmer(Date.to.Fruit.Oday.2018~Region + (1 | Population) + 
-						 	(1 | Family.Unique) + (1 | Block.ID), data = flr18)
-						 
-summary(dtfr18.mod2)
-hist(residuals(dtfr18.mod2))
+						 family = Gamma(link=log))
+
+summary(dtfr18.mod)
+hist(residuals(dtfr18.mod))
 dtfr18.out <-	summary(dtfr18.mod)
 dtfr18.out
 hist(residuals(dtfr18.mod))
+
+##pull variables from model##
 vars <- as.data.frame(VarCorr(dtfr18.mod2))[, c('grp','vcov')]
 intercept <- fixef(dtfr18.mod2)['(Intercept)']
 vars
@@ -558,32 +967,202 @@ vp
 #latent scale heritability#
 lh2 <- va/vp
 lh2
-##put in QGparams##
-herit2 <- QGparams(mu = mu, var.a = va, var.p = vp,  model = "Gaussian")
-herit2
+#################Gamma custom###########
+###IF RUNNING GAMMA DISTRIBUTION, NEED 'CUSTOM' MODEL DESGIN IN QGPARAMS##
+##per wikipedia gamma consists of two parameters: shape parameter (k) and scale (theta)##
+##https://stats.stackexchange.com/questions/96972/how-to-interpret-parameters-in-glm-with-family-gamma
+
+##Pull parameters from fitdistr##
+g <- fitdistr(flr17$DTFF.Ordinal.Day.2017, "gamma")
+g
+##Shape parameter (k)##
+k <- g$estimate[1]
+##fitdistr gives rate parameter (beta), which is inverse of scale(theta)##
+##using theta because scale term seems more common##
+theta <- 1/(g$estimate[2])
+e <- exp(1)
+##define functions for QGparams##
+inv.link <- function(x){exp(x)}
+var.func <- function(x){k*theta^2}
+d.inv.link <- function(x){e^(x)}
+custom.functions <- list(inv.link =inv.link, var.func=var.func,
+								 d.inv.link = d.inv.link)
+herit.gam <- QGparams(mu = mu, var.a = va, var.p = vp, 
+							 custom.model = custom.functions) 
+herit.gam
+
 ##add to table
-h2[13,1] <- "Date to Fruit"
-h2[13,2] <- "2018"
-h2[13,3] <- herit2$h2.obs
+h2[15,1] <- "Date to Fruit"
+h2[15,2] <- "2018"
+h2[15,3] <- herit.gam$h2.obs
 h2
 ###########################
 
-##Seedmass 2018##
-###########################
-flr.18 <- filter(df, Flowering.Y.N.2018 >= 1)
-hist(flr.18$Seedmass18.mg)
-flr18 <- flr.18[!is.na(flr.18$Seedmass18.mg),]
-f1g <- fitdist(flr18$Seedmass18.mg, "norm")
-f2g <- fitdist(flr18$Seedmass18.mg, "pois")
-fg3 <- fitdist(log(flr18$Seedmass18.mg), "norm")
-fg4 <- fitdist(log(flr18$Seedmass18.mg), "nbinom")
+##No. flowers 2018##16
+############################
+View(df)
+flr.18 <- filter(df, Total.Flowers.2018 >=1)
+#View(flr.18)
+flr18 <- df[!is.na(df$Total.Flowers.2018),]
+hist(flr18$Total.Flowers.2018)
+f1g <- fitdist(flr18$Total.Flowers.2018, "norm")
+f2g <- fitdist(flr18$Total.Flowers.2018, "pois")
+f3g <- fitdist(flr18$Total.Flowers.2018, "nbinom")
+f4g <- fitdist(flr18$Total.Flowers.2018, "gamma")
 plot(f1g)
 plot(f2g)
-plot(fg3)
-plot(fg4)
-seeds18.mod<- glmer(Seedmass18.mg~Region + (1 | Population) + 
-						  	(1 | Family.Unique) + (1 | Block.ID), data = flr18,
-						  family = negative.binomial(1.2657))
+plot(f3g)
+plot(f4g)
+f1 <- fitdistr(flr18$Total.Flowers.2018, "normal")
+f2 <- fitdistr(flr18$Total.Flowers.2018, "poisson")
+f3 <- fitdistr(flr18$Total.Flowers.2018, "negative binomial")
+f3 #theta 0.31204072
+##with zeros removed: theta = 1.9207413
+AIC(f1, f2, f3)
+
+n.flr.mod <- glmer(Total.Flowers.2018~Region + (1 | Population) + 
+						 	(1 | Family.Unique) + (1 | Block.ID), data = flr.18,
+						 family=neg.bin(theta = 1.9207413))
+hist(residuals(n.flr.mod))
+
+vars <- as.data.frame(VarCorr(n.flr.mod))[, c('grp','vcov')]
+intercept <- fixef(n.flr.mod)['(Intercept)']
+##verify data loaded in to objects##
+vars
+##verify data loaded in to objects##
+intercept
+
+##View latent-scale values region mean##
+##values are for variables from model, not yet converted to observation scale##
+theta <-  1.9207413
+##region mean##
+mu <- intercept
+##additive variance NOTE: 4 times value due to half-sibling design##
+va <- 4*vars[vars[["grp"]] == "Family.Unique", "vcov"]
+va
+##total variance in trait##
+vp <- sum(vars[,"vcov"])
+vp
+##Latent-scale narrow-sense heritability##
+lh2 <- va/vp
+lh2
+
+##Run QGparams to convert to observation scale (gives real heritability values)##
+##put in QGparams##
+herit2 <- QGparams(mu = mu, var.a = va, var.p = vp, theta = theta, model = "negbin.log")
+##NOTE: with mu being regional(fixed effect) mean, heritability is calculated as h2 of trait 
+#across all regions, could be worth breaking apart##
+herit2
+
+h2[16,1] <- "Number of Flowers"
+h2[16,2] <- "2018"
+h2[16,3] <- herit2$h2.obs
+h2
+############################
+
+##No. fruit 2018##17
+############################
+flr.18 <- filter(df, No.Fruit.2018 >=1)
+flr18 <- df[!is.na(df$No.Fruit.2018),]
+summary(flr18$No.Fruit.2018)
+hist(flr18$No.Fruit.2018)
+##distributions with zeros in##
+f1g <- fitdistr(flr18$No.Fruit.2018, "normal")
+f2g <- fitdistr(flr18$No.Fruit.2018, "poisson")
+f3g <- fitdistr(flr18$No.Fruit.2018, "negative binomial")
+##f4g <- fitdistr(flr18$No.Fruit.2018, "gamma") doesn't work##
+AIC(f1g,f2g,f3g)
+f3g #theta = 0.22335483
+
+##subset out zeros##
+f1g <- fitdistr(flr.18$No.Fruit.2018, "normal")
+f2g <- fitdistr(flr.18$No.Fruit.2018, "poisson")
+f3g <- fitdistr(flr.18$No.Fruit.2018, "negative binomial")
+f4g <- fitdistr(flr.18$No.Fruit.2018, "gamma")
+AIC(f1g,f2g,f3g, f4g)
+f3g #theta = 2.5503853
+f4g 
+
+n.frt.mod <- glmer(No.Fruit.2018~Region + (1 | Population) + 
+						 	(1 | Family.Unique) + (1 | Block.ID), data = flr.18,
+						 family=neg.bin(theta = 2.5503853))
+hist(residuals(n.frt.mod))
+
+vars <- as.data.frame(VarCorr(n.frt.mod))[, c('grp','vcov')]
+intercept <- fixef(n.frt.mod)['(Intercept)']
+##verify data loaded in to objects##
+vars
+##verify data loaded in to objects##
+intercept
+
+##View latent-scale values region mean##
+##values are for variables from model, not yet converted to observation scale##
+theta <-  2.5503853
+##region mean##
+mu <- intercept
+##additive variance NOTE: 4 times value due to half-sibling design##
+va <- 4*vars[vars[["grp"]] == "Family.Unique", "vcov"]
+va
+##total variance in trait##
+vp <- sum(vars[,"vcov"])
+vp
+##Latent-scale narrow-sense heritability##
+lh2 <- va/vp
+lh2
+
+##Run QGparams to convert to observation scale (gives real heritability values)##
+##put in QGparams##
+herit2 <- QGparams(mu = mu, var.a = va, var.p = vp, theta = theta, model = "negbin.log")
+##NOTE: with mu being regional(fixed effect) mean, heritability is calculated as h2 of trait 
+#across all regions, could be worth breaking apart##
+herit2
+
+##NOTE--With Negative binomial and theta from Mason--residuals ok--model failed to converge##
+
+h2[17,1] <- "Number of Fruit"
+h2[17,2] <- "2018"
+h2[17,3] <- herit2$h2.obs
+h2
+###########################
+
+
+
+##Seedmass 2018##18
+###########################
+flr.18 <- filter(df, Flowering.Y.N.2018 >= 1)
+hist(flr.18$sm.3)
+flr18 <- df[!is.na(df$sm.3),]
+hist(flr18$sm.3)
+##distributions with zeros in##
+f1g <- fitdistr(flr18$sm.3, "normal")
+f2g <- fitdistr(flr18$sm.3, "poisson")
+f3g <- fitdistr(flr18$sm.3, "negative binomial")
+f4g <- fitdistr(flr18$sm.3, "gamma") 
+AIC(f1g,f2g,f3g, f4g)
+f3g #theta = 0.22335483
+f4g #theta = 1.67350953
+
+##subset out zeros##
+f1g <- fitdistr(flr.18$sm.3, "normal")
+f2g <- fitdistr(flr.18$sm.3, "poisson")
+f3g <- fitdistr(flr.18$sm.3, "negative binomial")
+f4g <- fitdistr(flr.18$sm.3, "gamma")
+AIC(f1g,f2g,f3g, f4g)
+f3g #theta = 2.5503853
+f4g 
+
+f1g <- fitdist(flr18$sm.3, "norm")
+f2g <- fitdist(flr18$sm.3, "pois")
+f3g <- fitdist(flr18$sm.3, "nbinom")
+f4g <- fitdist(flr18$sm.3, "gamma") 
+plot(f1g)
+plot(f2g)
+plot(f3g)
+plot(f4g)
+
+seeds18.mod<- glmer(sm.3~Region + (1 | Population) + 
+						  	(1 | Family.Unique) + (1 | Block.ID), data = flr.18,
+						  family = negative.binomial(2.5503853))
 seeds18.out <-	summary(seeds18.mod)
 seeds18.out
 hist(residuals(seeds18.mod))
@@ -593,7 +1172,7 @@ vars
 intercept
 #latent region mean#
 mu <- intercept
-theta <- 1.2657
+theta <- 2.5503853
 va <- 4*vars[vars[["grp"]] == "Family.Unique", "vcov"]
 va
 vp <- sum(vars[,"vcov"])
@@ -605,49 +1184,11 @@ lh2
 herit2 <- QGparams(mu = mu, var.a = va, var.p = vp, theta = 1.2657, model = "negbin.log")
 herit2
 ##add to table
-h2[14,1] <- "seedmass"
-h2[14,2] <- "2018"
-h2[14,3] <- herit2$h2.obs
+h2[18,1] <- "seedmass"
+h2[18,2] <- "2018"
+h2[18,3] <- herit2$h2.obs
 h2
 ###########################
-
-##Number of fruit  2018##
-###########################
-f1g <- fitdist(flr18$No.Fruit.2018, "norm")
-f2g <- fitdist(flr18$No.Fruit.2018, "pois")
-plot(f1g)
-plot(f2g)
-hist(flr.18$No.Fruit.2018)
-nfr18.mod<- glmer(No.Fruit.2018~Region + (1 | Population) + 
-							(1 | Family.Unique) + (1 | Block.ID), data = flr18,
-						##went with poisson
-						family=poisson(link=log))
-nfr18.out <-	summary(nfr18.mod)
-nfr18.out
-hist(residuals(nfr18.mod))
-vars <- as.data.frame(VarCorr(nfr18.mod))[, c('grp','vcov')]
-intercept <- fixef(nfr18.mod)['(Intercept)']
-vars
-intercept
-#latent region mean#
-mu <- intercept
-va <- 4*vars[vars[["grp"]] == "Family.Unique", "vcov"]
-va
-vp <- sum(vars[,"vcov"])
-vp
-#latent scale heritability#
-lh2 <- va/vp
-lh2
-##put in QGparams##
-herit2 <- QGparams(mu = mu, var.a = va, var.p = vp, model = "Poisson.log")
-herit2
-##add to table
-h2[15,1] <- "Number of Fruit"
-h2[15,2] <- "2018"
-h2[15,3] <- herit2$h2.obs
-h2
-###########################
-
 
 str(h2)
-write.csv(h2, "heritabilities from pheno-fit3.csv")
+write.csv(h2, "heritabilities_for_traits.csv")
