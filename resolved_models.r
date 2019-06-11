@@ -12,7 +12,7 @@ library(fitdistrplus)
 #old datasheet
 #df <- read.csv('NV_CG_Experiment-mg.csv')
 ##cleaned data from aster model datasheet in git repo##
-df <- read.csv("full_clean_geum_experiment.csv")
+df <- read.csv("cleaned_NV_CG_experiment_data.csv")
 View(df)
 
 ###########################################################
