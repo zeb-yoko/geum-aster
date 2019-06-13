@@ -340,7 +340,7 @@ f4 <- fitdistr(nfr$No.Fruit.2016, "negative binomial")
 AIC(f1,f2,f4)
 ##Negative binomial best fit##
 f4 #theta 0.16237431
-f4g <- fitdist(nfr$No.Fruit.2016, "negbin")
+f4g <- fitdist(nfr$No.Fruit.2016, "nbinom")
 plot(f4g)
 n.fruit.mod <- glmer(No.Fruit.2016~Region + (1 | Population) + 
 								(1 | Family.Unique) + (1 | Block.ID), data = nfr,
@@ -396,13 +396,12 @@ h2
 
 ##Seedmass 2016##6
 ###########################
-View(df)
 df1 <-df[!is.na(df$sm),]
 f1 <- fitdistr(df1$sm, "normal")
 f2 <- fitdistr(df1$sm, "Poisson")
-f3 <- fitdistr(df1$sm, "gamma")
+#f3 <- fitdistr(df1$sm, "gamma") #doesn't work with this data
 f4 <- fitdistr(df1$sm, "negative binomial")
-AIC(f1,f2,f3,f4)
+AIC(f1,f2,f4)
 hist(df1$sm)
 f4 #theta = 0.013268236
 n.seed.mod <- glmer(sm~Region + (1 | Population) + 
@@ -529,6 +528,7 @@ herit.gam
 ##add to table
 h2[7,1] <- "Date to First Flower"
 h2[7,2] <- "2017"
+##enter NA since model doesn't work##
 h2[7,3] <- NA
 h2
 ###########################
@@ -548,7 +548,7 @@ dtb.gam<- glmer(DtB.O.Day.2017~Region + (1 | Population) +
 					 family = Gamma(link=log))
 hist(residuals(dtb.gam))
 
-v##pull coefficients: intercept and variance components for QGglmm##
+##pull coefficients: intercept and variance components for QGglmm##
 vars <- as.data.frame(VarCorr(dtb.gam))[, c('grp','vcov')]
 ##GL_alvar region mean (intercept)##
 intercept<-fixef(dtb.gam)['(Intercept)']*(nrow(dplyr::filter(flr17, flr17$Region =="GL_alvar"))/nrow(flr17))
@@ -696,10 +696,10 @@ flr.17 <- filter(df, Total.Flowers.2017 >=1)
 flr17 <- df[!is.na(df$Total.Flowers.2017),]
 hist(flr17$Total.Flowers.2017)
 fi <- fitdistr(flr17$Total.Flowers.2017, "normal")
-fj <- fitdistr(flr17Total.Flowers.2017, "poisson")
-fk <- fitdistr(flr17$Total.Flowers.2017, "Gamma")
+fj <- fitdistr(flr17$Total.Flowers.2017, "poisson")
+#fk <- fitdistr(flr17$Total.Flowers.2017, "Gamma")# Doesn't work
 fl <- fitdistr(flr17$Total.Flowers.2017, "negative binomial")## error-fails
-AIC(fi,fl)
+AIC(fi,fj,fl)
 fl #theta = 2.4967562
 fitdistr(flr17$Total.Flowers.2017, "negative binomial")
 
@@ -751,7 +751,7 @@ herit2
 
 h2[10,1] <- "Number of Flowers"
 h2[10,2] <- "2017"
-h2[10,3] <- NA
+h2[10,3] <- herit2$h2.obs
 h2
 ############################
 
@@ -767,7 +767,7 @@ AIC(f1g,f2g,f3g)
 f3g #theta 2.1804933
 n.frt.mod <- glmer(No.Fruit.2017~Region + (1 | Population) + 
 						 	(1 | Family.Unique) + (1 | Block.ID), data = flr17,
-						 family=neg.bin(theta = .237))
+						 family=neg.bin(theta = 2.1804933))
 
 hist(residuals(n.frt.mod))
 
@@ -791,7 +791,7 @@ mu <- intercept+pra+mba
 mu
 ##View latent-scale values region mean##
 ##values are for variables from model, not yet converted to observation scale##
-theta <-  0.237
+theta <-  2.1804933
 ##additive variance NOTE: 4 times value due to half-sibling design##
 va <- 4*vars[vars[["grp"]] == "Family.Unique", "vcov"]
 va
@@ -819,12 +819,11 @@ h2
 
 ##Seedmass 2017##12
 ###########################
-View(df)
 flr17 <- df[!is.na(df$sm.2),]
 hist(flr17$sm.2)
 f1g <- fitdistr(flr17$sm.2, "normal")
 f2g <- fitdistr(flr17$sm.2, "poisson")
-f3g <- fitdistr(flr17$sm.2, "Gamma")
+#f3g <- fitdistr(flr17$sm.2, "Gamma") # doesn't work
 f4g <- fitdistr(flr17$sm.2, "negative binomial")
 AIC(f1g, f2g, f4g)
 f4g #theta = 0.50654046
@@ -832,7 +831,7 @@ f4g #theta = 0.50654046
 ##when ran glmer.nb: Negative Binomial(1.347)  ( log )##
 seed17.mod<- glmer(sm.2~Region + (1 | Population) + 
 						  	(1 | Family.Unique) + (1 | Block.ID), data = flr17,
-							 family = negative.binomial(0.50654046))
+							 family = negative.binomial(theta = 0.50654046))
 summary(seed17.mod)
 hist(residuals(seed17.mod))
 
@@ -907,19 +906,26 @@ dtff18.mod<- glmer(DTFF.18.Oday~Region + (1 | Population) +
 summary(dtff18.mod)
 hist(residuals(dtff18.mod))
 
+##pull coefficients: intercept and variance components for QGglmm##
 vars <- as.data.frame(VarCorr(dtff18.mod))[, c('grp','vcov')]
-intercept <- fixef(dtff18.mod)['(Intercept)']
-
-##verify data loaded in to objects##
+##GL_alvar region mean (intercept)##
+intercept<-fixef(dtff18.mod)['(Intercept)']*(nrow(dplyr::filter(flr18, flr18$Region =="GL_alvar"))/nrow(flr17))
+##Prairie region mean (intercept)##
+pra <-fixef(dtff18.mod)['RegionPrairie']*(nrow(dplyr::filter(flr18, flr18$Region == "Prairie"))/nrow(flr17))
+##MB_alvar region mean (intercept)##
+mba <- fixef(dtff18.mod)['RegionMB_alvar']*(nrow(dplyr::filter(flr18, flr18$Region =="MB_alvar"))/nrow(flr17))
+#verify data loaded in to objects##
 vars
-##verify data loaded in to objects##
 intercept
-
+pra 
+mba
+##look at model values to make sure mu makes sense##
+fixef(dtff18.mod)
+#should be: ##plus or times? (+ vs *)
+mu <- intercept+pra+mba
+mu
 ##View latent-scale values region mean##
 ##values are for variables from model, not yet converted to observation scale##
-
-##region mean##
-mu <- intercept
 ##additive variance NOTE: 4 times value due to half-sibling design##
 va <- 4*vars[vars[["grp"]] == "Family.Unique", "vcov"]
 va
@@ -1065,7 +1071,7 @@ dtfr18.out
 hist(residuals(dtfr18.gam))
 
 ##pull coefficients: intercept and variance components for QGglmm##
-vars <- as.data.frame(VarCorr(ddtfr18.gam))[, c('grp','vcov')]
+vars <- as.data.frame(VarCorr(dtfr18.gam))[, c('grp','vcov')]
 ##GL_alvar region mean (intercept)##
 intercept<-fixef(dtfr18.gam)['(Intercept)']*(nrow(dplyr::filter(flr18, flr18$Region =="GL_alvar"))/nrow(flr17))
 ##Prairie region mean (intercept)##
@@ -1122,7 +1128,6 @@ h2
 
 ##No. flowers 2018##16
 ############################
-View(df)
 flr.18 <- filter(df, Total.Flowers.2018 >=1)
 #View(flr.18)
 flr18 <- df[!is.na(df$Total.Flowers.2018),]
@@ -1138,13 +1143,12 @@ plot(f4g)
 f1 <- fitdistr(flr18$Total.Flowers.2018, "normal")
 f2 <- fitdistr(flr18$Total.Flowers.2018, "poisson")
 f3 <- fitdistr(flr18$Total.Flowers.2018, "negative binomial")
-f3 #theta 0.31204072
-##with zeros removed: theta = 1.9207413
+f3 #theta 2.9005220
 AIC(f1, f2, f3)
 
 n.flr.mod <- glmer(Total.Flowers.2018~Region + (1 | Population) + 
 						 	(1 | Family.Unique) + (1 | Block.ID), data = flr.18,
-						 family=neg.bin(theta = 1.9207413))
+						 family=neg.bin(theta = 2.9005220))
 hist(residuals(n.flr.mod))
 
 ##pull coefficients: intercept and variance components for QGglmm##
@@ -1168,7 +1172,7 @@ mu
 
 ##View latent-scale values region mean##
 ##values are for variables from model, not yet converted to observation scale##
-theta <-  1.9207413
+theta <-  2.9005220
 ##additive variance NOTE: 4 times value due to half-sibling design##
 va <- 4*vars[vars[["grp"]] == "Family.Unique", "vcov"]
 va
@@ -1307,7 +1311,7 @@ vp
 lh2 <- va/vp
 lh2
 ##put in QGparams##
-herit2 <- QGparams(mu = mu, var.a = va, var.p = vp, theta = 1.2657, model = "negbin.log")
+herit2 <- QGparams(mu = mu, var.a = va, var.p = vp, theta = theta, model = "negbin.log")
 herit2
 ##add to table
 h2[18,1] <- "seedmass"
