@@ -43,17 +43,25 @@ summary(germ.mod)
 hist(residuals(germ.mod))
 ##pull coefficients: intercept and variance components for QGglmm##
 vars <- as.data.frame(VarCorr(germ.mod))[, c('grp','vcov')]
-intercept <- fixef(germ.mod)['(Intercept)']
-##verify data loaded in to objects##
+##GL_alvar region mean (intercept)##
+intercept<-fixef(germ.mod)['(Intercept)']*(nrow(dplyr::filter(germ, germ$Region =="GL_alvar"))/nrow(flr17))
+##Prairie region mean (intercept)##
+pra <-fixef(germ.mod)['RegionPrairie']*(nrow(dplyr::filter(germ, germ$Region == "Prairie"))/nrow(flr17))
+##MB_alvar region mean (intercept)##
+mba <- fixef(germ.mod)['RegionMB_alvar']*(nrow(dplyr::filter(germ, germ$Region =="MB_alvar"))/nrow(flr17))
+#verify data loaded in to objects##
 vars
-##verify data loaded in to objects##
 intercept
-
+pra 
+mba
+##look at model values to make sure mu makes sense##
+fixef(germ.mod)
+#should be: ##plus or times? (+ vs *)
+mu <- intercept+pra+mba
+mu
 ##View latent-scale values region mean##
 ##values are for variables from model, not yet converted to observation scale##
 
-##region mean##
-mu <- intercept
 ##additive variance NOTE: 4 times value due to half-sibling design##
 va <- 4*vars[vars[["grp"]] == "Family.Unique", "vcov"]
 va
@@ -102,27 +110,35 @@ f1 <- fitdistr(TrueLeaf$No.Days.to.TrueLeaf, "lognormal")
 f2 <- fitdistr(TrueLeaf$No.Days.to.TrueLeaf, "poisson")
 f3 <- fitdistr(TrueLeaf$No.Days.to.TrueLeaf, "Gamma")
 AIC(f1,f2,f3)
-
+##poisson visually looks best as description of data##
 ##Model Statement##
 TrueLeaf.mod <- glmer(No.Days.to.TrueLeaf~Region + (1 | Population) + 
-							(1 | Family.Unique) + (1 | Block.ID), data = df,
+							(1 | Family.Unique) + (1 | Block.ID), data = TrueLeaf,
 							 family=poisson(link=log))
 ##output##
 summary(TrueLeaf.mod)
 hist(residuals(TrueLeaf.mod))
 
-##intercept and variance components for QGglmm##
+##pull coefficients: intercept and variance components for QGglmm##
 vars <- as.data.frame(VarCorr(TrueLeaf.mod))[, c('grp','vcov')]
-intercept <- fixef(TrueLeaf.mod)['(Intercept)']
-##verify data loaded in to objects##
+##GL_alvar region mean (intercept)##
+intercept<-fixef(TrueLeaf.mod)['(Intercept)']*(nrow(dplyr::filter(TrueLeaf, TrueLeaf$Region =="GL_alvar"))/nrow(flr17))
+##Prairie region mean (intercept)##
+pra <-fixef(TrueLeaf.mod)['RegionPrairie']*(nrow(dplyr::filter(TrueLeaf, TrueLeaf$Region == "Prairie"))/nrow(flr17))
+##MB_alvar region mean (intercept)##
+mba <- fixef(TrueLeaf.mod)['RegionMB_alvar']*(nrow(dplyr::filter(TrueLeaf, TrueLeaf$Region =="MB_alvar"))/nrow(flr17))
+#verify data loaded in to objects##
 vars
-##verify data loaded in to objects##
 intercept
-
+pra 
+mba
+##look at model values to make sure mu makes sense##
+fixef(TrueLeaf.mod)
+#should be: ##plus or times? (+ vs *)
+mu <- intercept+pra+mba
+mu
 ##View latent-scale values region mean##
 ##values are for variables from model, not yet converted to observation scale##
-##region mean##
-mu <- intercept
 ##additive variance NOTE: 4 times value due to half-sibling design##
 va <- 4*vars[vars[["grp"]] == "Family.Unique", "vcov"]
 va
@@ -166,6 +182,7 @@ k <- g$estimate[1]
 theta <- 1/(g$estimate[2])
 
 ##Model Statement##
+##NOTE: using .gam instead of .mod for gamma-distributed models##
 dtff.gam <- glmer(no.Planting.to.DTFF~Region + (1 | Population) + 
 					  	(1 | Family.Unique) + (1 | Block.ID), data = flr.16,
 					  family = Gamma(link=log))
@@ -174,18 +191,24 @@ summary(dtff.gam)
 hist(residuals(dtff.gam))
 dtff.gam
 
-##intercept and variance components for QGglmm##
+##pull coefficients: intercept and variance components for QGglmm##
 vars <- as.data.frame(VarCorr(dtff.gam))[, c('grp','vcov')]
-intercept <- fixef(dtff.gam)['(Intercept)']
-##verify data loaded in to objects##
+##GL_alvar region mean (intercept)##
+intercept<-fixef(dtff.gam)['(Intercept)']*(nrow(dplyr::filter(flr.16, flr.16$Region =="GL_alvar"))/nrow(flr17))
+##Prairie region mean (intercept)##
+pra <-fixef(dtff.gam)['RegionPrairie']*(nrow(dplyr::filter(flr.16, flr.16$Region == "Prairie"))/nrow(flr17))
+##MB_alvar region mean (intercept)##
+mba <- fixef(dtff.gam)['RegionMB_alvar']*(nrow(dplyr::filter(flr.16, flr.16$Region =="MB_alvar"))/nrow(flr17))
+#verify data loaded in to objects##
 vars
-##verify data loaded in to objects##
 intercept
-
-##View latent-scale values region mean##
-##values are for variables from model, not yet converted to observation scale##
-##region mean##
-mu <- intercept
+pra 
+mba
+##look at model values to make sure mu makes sense##
+fixef(dtff.gam)
+#should be: ##plus or times? (+ vs *)
+mu <- intercept+pra+mba
+mu
 ##additive variance NOTE: 4 times value due to half-sibling design##
 va <- 4*vars[vars[["grp"]] == "Family.Unique", "vcov"]
 va
@@ -245,24 +268,34 @@ n.flr.mod <- glmer(No.Flowers.2016~Region + (1 | Population) +
 summary(n.flr.mod)
 n.flr.mod2 <- glmer(No.Flowers.2016~Region + (1 | Population) + 
 						 	(1 | Family.Unique) + (1 | Block.ID), data = nfl,
-						  family = gaussian(link=log))
+						  family = Gamma(link=log))
 n.flr.mod2
 
 hist(residuals(n.flr.mod))
 hist(residuals(n.flr.mod2))
 
+##pull coefficients: intercept and variance components for QGglmm##
 vars <- as.data.frame(VarCorr(n.flr.mod))[, c('grp','vcov')]
-intercept <- fixef(n.flr.mod)['(Intercept)']
-##verify data loaded in to objects##
+##GL_alvar region mean (intercept)##
+intercept<-fixef(n.flr.mod)['(Intercept)']*(nrow(dplyr::filter(nfl, nfl$Region =="GL_alvar"))/nrow(flr17))
+##Prairie region mean (intercept)##
+pra <-fixef(n.flr.mod)['RegionPrairie']*(nrow(dplyr::filter(nfl, nfl$Region == "Prairie"))/nrow(flr17))
+##MB_alvar region mean (intercept)##
+mba <- fixef(n.flr.mod)['RegionMB_alvar']*(nrow(dplyr::filter(nfl, nfl$Region =="MB_alvar"))/nrow(flr17))
+#verify data loaded in to objects##
 vars
-##verify data loaded in to objects##
 intercept
+pra 
+mba
+##look at model values to make sure mu makes sense##
+fixef(n.flr.mod)
+#should be: ##plus or times? (+ vs *)
+mu <- intercept+pra+mba
+mu
 
 ##View latent-scale values region mean##
 ##values are for variables from model, not yet converted to observation scale##
 theta <-  1.29674244
-##region mean##
-mu <- intercept
 ##additive variance NOTE: 4 times value due to half-sibling design##
 va <- 4*vars[vars[["grp"]] == "Family.Unique", "vcov"]
 va
@@ -299,35 +332,44 @@ h2
 ###########################
 hist(df$No.Fruit.2016)
 nfr<-df[!is.na(df$No.Fruit.2016),]
+descdist(nfr$No.Fruit.2016)
 f1 <- fitdistr(nfr$No.Fruit.2016, "normal")
 f2 <- fitdistr(nfr$No.Fruit.2016, "Poisson")
-f3 <- fitdistr(nfr$No.Fruit.2016, "gamma")
+#f3 <- fitdistr(nfr$No.Fruit.2016, "gamma")#doesn't work with this data
 f4 <- fitdistr(nfr$No.Fruit.2016, "negative binomial")
-AIC(f1,f2,f3,f4)
+AIC(f1,f2,f4)
 ##Negative binomial best fit##
 f4 #theta 0.16237431
-
+f4g <- fitdist(nfr$No.Fruit.2016, "negbin")
+plot(f4g)
 n.fruit.mod <- glmer(No.Fruit.2016~Region + (1 | Population) + 
 								(1 | Family.Unique) + (1 | Block.ID), data = nfr,
 							family=neg.bin(theta = 0.16237431))
 n.fruit.out <-	summary(n.fruit.mod)
 n.fruit.out
 #store residuals
-n.fruit.resid <- residuals(n.fruit.mod)
-
+hist(residuals(n.fruit.mod))
+##pull coefficients: intercept and variance components for QGglmm##
 vars <- as.data.frame(VarCorr(n.fruit.mod))[, c('grp','vcov')]
-intercept <- fixef(n.fruit.mod)['(Intercept)']
-
-##verify data loaded in to objects##
+##GL_alvar region mean (intercept)##
+intercept<-fixef(n.fruit.mod)['(Intercept)']*(nrow(dplyr::filter(nfr, nfr$Region =="GL_alvar"))/nrow(flr17))
+##Prairie region mean (intercept)##
+pra <-fixef(n.fruit.mod)['RegionPrairie']*(nrow(dplyr::filter(nfr, nfr$Region == "Prairie"))/nrow(flr17))
+##MB_alvar region mean (intercept)##
+mba <- fixef(n.fruit.mod)['RegionMB_alvar']*(nrow(dplyr::filter(nfr, nfr$Region =="MB_alvar"))/nrow(flr17))
+#verify data loaded in to objects##
 vars
-##verify data loaded in to objects##
 intercept
-
+pra 
+mba
+##look at model values to make sure mu makes sense##
+fixef(n.fruit.mod)
+#should be: ##plus or times? (+ vs *)
+mu <- intercept+pra+mba
+mu
 ##View latent-scale values region mean##
 ##values are for variables from model, not yet converted to observation scale##
 theta <- 0.16237431
-##region mean##
-mu <- intercept
 ##additive variance NOTE: 4 times value due to half-sibling design##
 va <- 4*vars[vars[["grp"]] == "Family.Unique", "vcov"]
 va
@@ -369,20 +411,26 @@ n.seed.mod <- glmer(sm~Region + (1 | Population) +
 n.seed.out <-	summary(n.seed.mod)
 n.seed.out
 hist(residuals(n.seed.mod))
-##negbin is not a datatype rptR works with##
-#rpt.seedmass<-rpt(formula = sm~Region + (1 | Population) + 
-#				  	(1 | Family.Unique) + (1 | Block.ID), 
-#							grname = c("Fixed", "Block.ID", "Population", "Family.Unique"),
-#							data = df1, datatype = "nbinom", link = "log", nboot =0, ratio =T, adjusted =F)
-#rpt.seedmass
+##pull coefficients: intercept and variance components for QGglmm##
 vars <- as.data.frame(VarCorr(n.seed.mod))[, c('grp','vcov')]
-intercept <- fixef(n.seed.mod)['(Intercept)']
+##GL_alvar region mean (intercept)##
+intercept<-fixef(n.seed.mod)['(Intercept)']*(nrow(dplyr::filter(df1, df1$Region =="GL_alvar"))/nrow(flr17))
+##Prairie region mean (intercept)##
+pra <-fixef(n.seed.mod)['RegionPrairie']*(nrow(dplyr::filter(df1, df1$Region == "Prairie"))/nrow(flr17))
+##MB_alvar region mean (intercept)##
+mba <- fixef(n.seed.mod)['RegionMB_alvar']*(nrow(dplyr::filter(df1, df1$Region =="MB_alvar"))/nrow(flr17))
+#verify data loaded in to objects##
 vars
 intercept
+pra 
+mba
+##look at model values to make sure mu makes sense##
+fixef(n.seed.mod)
+#should be: ##plus or times? (+ vs *)
+mu <- intercept+pra+mba
+mu
 ##Negative binomial needs additional (dispersion) parameter, theta##
 theta <- 0.013268236
-##latent region mean##
-mu <- intercept
 ##Additive Variance--note 4x for half-sib design##
 va <- 4*vars[vars[["grp"]] == "Family.Unique", "vcov"]
 va
@@ -420,25 +468,31 @@ f3 <- fitdistr(flr17$DTFF.Ordinal.Day.2017, "Gamma")
 #f4 <- fitdistr(flr17$DTFF.Ordinal.Day.2017, "negative binomial")## error-fails
 AIC(f1,f2,f3)
 
-dtff.mod<- glmer(DTFF.Ordinal.Day.2017~Region + (1 | Population) + 
+dtff.gam<- glmer(DTFF.Ordinal.Day.2017~Region + (1 | Population) + 
 					  	(1 | Family.Unique) + (1 | Block.ID), data = flr17,
 					  ##first day = 107
 					  family = Gamma(link=log), control = glmerControl(optCtrl = list(maxfun=10000000)))
 ##not converging--model fails?##
-hist(residuals(dtff.mod))
+hist(residuals(dtff.gam))
 
-##intercept and variance components for QGglmm##
-vars <- as.data.frame(VarCorr(dtff.mod))[, c('grp','vcov')]
-intercept <- fixef(dtff.mod)['(Intercept)']
-##verify data loaded in to objects##
+##pull coefficients: intercept and variance components for QGglmm##
+vars <- as.data.frame(VarCorr(dtff.gam))[, c('grp','vcov')]
+##GL_alvar region mean (intercept)##
+intercept<-fixef(dtff.gam)['(Intercept)']*(nrow(dplyr::filter(flr17, flr17$Region =="GL_alvar"))/nrow(flr17))
+##Prairie region mean (intercept)##
+pra <-fixef(dtff.gam)['RegionPrairie']*(nrow(dplyr::filter(flr17, flr17$Region == "Prairie"))/nrow(flr17))
+##MB_alvar region mean (intercept)##
+mba <- fixef(dtff.gam)['RegionMB_alvar']*(nrow(dplyr::filter(flr17, flr17$Region =="MB_alvar"))/nrow(flr17))
+#verify data loaded in to objects##
 vars
-##verify data loaded in to objects##
 intercept
-
-##View latent-scale values region mean##
-##values are for variables from model, not yet converted to observation scale##
-##region mean##
-mu <- intercept
+pra 
+mba
+##look at model values to make sure mu makes sense##
+fixef(dtff.gam)
+#should be: ##plus or times? (+ vs *)
+mu <- intercept+pra+mba
+mu
 ##additive variance NOTE: 4 times value due to half-sibling design##
 va <- 4*vars[vars[["grp"]] == "Family.Unique", "vcov"]
 va
@@ -475,7 +529,7 @@ herit.gam
 ##add to table
 h2[7,1] <- "Date to First Flower"
 h2[7,2] <- "2017"
-h2[7,3] <- herit.gam$h2.obs
+h2[7,3] <- NA
 h2
 ###########################
 
@@ -488,24 +542,30 @@ f3 <- fitdistr(flr17$DtB.O.Day.2017, "Gamma")
 #f4 <- fitdistr(flr17$DtB.O.Day.2017, "negative binomial")## error-fails
 AIC(f1,f2,f3)
 ##model statement##
-dtb.mod<- glmer(DtB.O.Day.2017~Region + (1 | Population) + 
+dtb.gam<- glmer(DtB.O.Day.2017~Region + (1 | Population) + 
 					 	(1 | Family.Unique) + (1 | Block.ID), data = flr17,
 					 ##first day = ~114
 					 family = Gamma(link=log))
-hist(residuals(dtb.mod))
+hist(residuals(dtb.gam))
 
-rpt.dtb<-rptPoisson(formula = DtB.O.Day.2017~Region + (1 | Population) + 
-								(1 | Family.Unique) + (1 | Block.ID), 
-							grname = c("Fixed", "Block.ID", "Population", "Family.Unique"),
-							data = flr17, link = "log", nboot =0, ratio =T, adjusted =F)
-rpt.dtb
-vars <- as.data.frame(VarCorr(dtb.mod))[, c('grp','vcov')]
-intercept <- fixef(dtb.mod)['(Intercept)']
-##verify data loaded in to objects##
+v##pull coefficients: intercept and variance components for QGglmm##
+vars <- as.data.frame(VarCorr(dtb.gam))[, c('grp','vcov')]
+##GL_alvar region mean (intercept)##
+intercept<-fixef(dtb.gam)['(Intercept)']*(nrow(dplyr::filter(flr17, flr17$Region =="GL_alvar"))/nrow(flr17))
+##Prairie region mean (intercept)##
+pra <-fixef(dtb.gam)['RegionPrairie']*(nrow(dplyr::filter(flr17, flr17$Region == "Prairie"))/nrow(flr17))
+##MB_alvar region mean (intercept)##
+mba <- fixef(dtb.gam)['RegionMB_alvar']*(nrow(dplyr::filter(flr17, flr17$Region =="MB_alvar"))/nrow(flr17))
+#verify data loaded in to objects##
 vars
-##verify data loaded in to objects##
 intercept
-
+pra 
+mba
+##look at model values to make sure mu makes sense##
+fixef(dtb.gam)
+#should be: ##plus or times? (+ vs *)
+mu <- intercept+pra+mba
+mu
 ##View latent-scale values region mean##
 ##values are for variables from model, not yet converted to observation scale##
 
@@ -567,18 +627,26 @@ dtfr.mod<- glmer(Fruit.O.Day.2017~Region + (1 | Population) +
 					  family = Gamma(link=log))
 
 hist(residuals(dtfr.mod))
+nrow(flr17)
 vars <- as.data.frame(VarCorr(dtfr.mod))[, c('grp','vcov')]
-intercept <- fixef(dtfr.mod)['(Intercept)']
-##verify data loaded in to objects##
+##GL_alvar region mean (intercept)##
+intercept<-fixef(dtfr.mod)['(Intercept)']*(nrow(dplyr::filter(flr17, flr17$Region =="GL_alvar"))/nrow(flr17))
+##Prairie region mean (intercept)##
+pra <-fixef(dtfr.mod)['RegionPrairie']*(nrow(dplyr::filter(flr17, flr17$Region == "Prairie"))/nrow(flr17))
+##MB_alvar region mean (intercept)##
+mba <- fixef(dtfr.mod)['RegionMB_alvar']*(nrow(dplyr::filter(flr17, flr17$Region =="MB_alvar"))/nrow(flr17))
+#verify data loaded in to objects##
 vars
-##verify data loaded in to objects##
+fixef(dtfr.mod)
 intercept
-
+pra 
+mba
+#should be: ##plus or times? (+ vs *)
+mu <- intercept+pra+mba
+mu
 ##View latent-scale values region mean##
 ##values are for variables from model, not yet converted to observation scale##
 
-##region mean##
-mu <- intercept
 ##additive variance NOTE: 4 times value due to half-sibling design##
 va <- 4*vars[vars[["grp"]] == "Family.Unique", "vcov"]
 va
@@ -640,18 +708,28 @@ n.flr.mod <- glmer(Total.Flowers.2017~Region + (1 | Population) +
 						 family=neg.bin(theta = 2.4967562))
 hist(residuals(n.flr.mod))
 
+##pull coefficients: intercept and variance components for QGglmm##
 vars <- as.data.frame(VarCorr(n.flr.mod))[, c('grp','vcov')]
-intercept <- fixef(n.flr.mod)['(Intercept)']
-##verify data loaded in to objects##
+##GL_alvar region mean (intercept)##
+intercept<-fixef(n.flr.mod)['(Intercept)']*(nrow(dplyr::filter(flr17, flr17$Region =="GL_alvar"))/nrow(flr17))
+##Prairie region mean (intercept)##
+pra <-fixef(n.flr.mod)['RegionPrairie']*(nrow(dplyr::filter(flr17, flr17$Region == "Prairie"))/nrow(flr17))
+##MB_alvar region mean (intercept)##
+mba <- fixef(n.flr.mod)['RegionMB_alvar']*(nrow(dplyr::filter(flr17, flr17$Region =="MB_alvar"))/nrow(flr17))
+#verify data loaded in to objects##
 vars
-##verify data loaded in to objects##
 intercept
+pra 
+mba
+##look at model values to make sure mu makes sense##
+fixef(n.flr.mod)
+#should be: ##plus or times? (+ vs *)
+mu <- intercept+pra+mba
+mu
 
 ##View latent-scale values region mean##
 ##values are for variables from model, not yet converted to observation scale##
 theta <-  2.4967562
-##region mean##
-mu <- intercept
 ##additive variance NOTE: 4 times value due to half-sibling design##
 va <- 4*vars[vars[["grp"]] == "Family.Unique", "vcov"]
 va
@@ -673,7 +751,7 @@ herit2
 
 h2[10,1] <- "Number of Flowers"
 h2[10,2] <- "2017"
-h2[10,3] <- herit2$h2.obs
+h2[10,3] <- NA
 h2
 ############################
 
@@ -693,18 +771,27 @@ n.frt.mod <- glmer(No.Fruit.2017~Region + (1 | Population) +
 
 hist(residuals(n.frt.mod))
 
+##pull coefficients: intercept and variance components for QGglmm##
 vars <- as.data.frame(VarCorr(n.frt.mod))[, c('grp','vcov')]
-intercept <- fixef(n.frt.mod)['(Intercept)']
-##verify data loaded in to objects##
+##GL_alvar region mean (intercept)##
+intercept<-fixef(n.frt.mod)['(Intercept)']*(nrow(dplyr::filter(flr17, flr17$Region =="GL_alvar"))/nrow(flr17))
+##Prairie region mean (intercept)##
+pra <-fixef(n.frt.mod)['RegionPrairie']*(nrow(dplyr::filter(flr17, flr17$Region == "Prairie"))/nrow(flr17))
+##MB_alvar region mean (intercept)##
+mba <- fixef(n.frt.mod)['RegionMB_alvar']*(nrow(dplyr::filter(flr17, flr17$Region =="MB_alvar"))/nrow(flr17))
+#verify data loaded in to objects##
 vars
-##verify data loaded in to objects##
 intercept
-
+pra 
+mba
+##look at model values to make sure mu makes sense##
+fixef(n.frt.mod)
+#should be: ##plus or times? (+ vs *)
+mu <- intercept+pra+mba
+mu
 ##View latent-scale values region mean##
 ##values are for variables from model, not yet converted to observation scale##
 theta <-  0.237
-##region mean##
-mu <- intercept
 ##additive variance NOTE: 4 times value due to half-sibling design##
 va <- 4*vars[vars[["grp"]] == "Family.Unique", "vcov"]
 va
@@ -726,7 +813,7 @@ herit2
 
 h2[11,1] <- "Number of Fruit"
 h2[11,2] <- "2017"
-h2[11,3] <- herit2$h2.obs
+h2[11,3] <- NA
 h2
 ###########################
 
@@ -749,16 +836,27 @@ seed17.mod<- glmer(sm.2~Region + (1 | Population) +
 summary(seed17.mod)
 hist(residuals(seed17.mod))
 
-##pull data from model##
+##pull coefficients: intercept and variance components for QGglmm##
 vars <- as.data.frame(VarCorr(seed17.mod))[, c('grp','vcov')]
-intercept <- fixef(seed17.mod)['(Intercept)']
+##GL_alvar region mean (intercept)##
+intercept<-fixef(seed17.mod)['(Intercept)']*(nrow(dplyr::filter(flr17, flr17$Region =="GL_alvar"))/nrow(flr17))
+##Prairie region mean (intercept)##
+pra <-fixef(seed17.mod)['RegionPrairie']*(nrow(dplyr::filter(flr17, flr17$Region == "Prairie"))/nrow(flr17))
+##MB_alvar region mean (intercept)##
+mba <- fixef(seed17.mod)['RegionMB_alvar']*(nrow(dplyr::filter(flr17, flr17$Region =="MB_alvar"))/nrow(flr17))
+#verify data loaded in to objects##
 vars
 intercept
+pra 
+mba
+##look at model values to make sure mu makes sense##
+fixef(seed17.mod)
+#should be: ##plus or times? (+ vs *)
+mu <- intercept+pra+mba
+mu
 ##additonal negative binomial parameter##
 theta <- 0.50654046
 
-##latent region mean##
-mu <- intercept
 va <- 4*vars[vars[["grp"]] == "Family.Unique", "vcov"]
 va
 vp <- sum(vars[,"vcov"])
@@ -905,12 +1003,24 @@ dtb18.out3 <-	summary(dtb18.mod3)
 dtb18.out3
 hist(residuals(dtb18.mod3))
 
+##pull coefficients: intercept and variance components for QGglmm##
 vars <- as.data.frame(VarCorr(dtb18.mod))[, c('grp','vcov')]
-intercept <- fixef(dtb18.mod)['(Intercept)']
+##GL_alvar region mean (intercept)##
+intercept<-fixef(dtb18.mod)['(Intercept)']*(nrow(dplyr::filter(flr18, flr18$Region =="GL_alvar"))/nrow(flr17))
+##Prairie region mean (intercept)##
+pra <-fixef(dtb18.mod)['RegionPrairie']*(nrow(dplyr::filter(flr18, flr18$Region == "Prairie"))/nrow(flr17))
+##MB_alvar region mean (intercept)##
+mba <- fixef(dtb18.mod)['RegionMB_alvar']*(nrow(dplyr::filter(flr18, flr18$Region =="MB_alvar"))/nrow(flr17))
+#verify data loaded in to objects##
 vars
 intercept
-#latent region mean#
-mu <- intercept
+pra 
+mba
+##look at model values to make sure mu makes sense##
+fixef(germ.mod)
+#should be: ##plus or times? (+ vs *)
+mu <- intercept+pra+mba
+mu
 va <- 4*vars[vars[["grp"]] == "Family.Unique", "vcov"]
 va
 vp <- sum(vars[,"vcov"])
@@ -944,23 +1054,34 @@ f2 <- fitdistr(flr18$Date.to.Fruit.Oday.2018, "poisson")
 f3 <- fitdistr(flr18$Date.to.Fruit.Oday.2018, "gamma")
 AIC(f1, f2, f3)
 
-dtfr18.mod<- glmer(Date.to.Fruit.Oday.2018~Region + (1 | Population) + 
+dtfr18.gam<- glmer(Date.to.Fruit.Oday.2018~Region + (1 | Population) + 
 						 	(1 | Family.Unique) + (1 | Block.ID), data = flr18,
 						 family = Gamma(link=log))
 
-summary(dtfr18.mod)
-hist(residuals(dtfr18.mod))
-dtfr18.out <-	summary(dtfr18.mod)
+summary(dtfr18.gam)
+hist(residuals(dtfr18.gam))
+dtfr18.out <-	summary(dtfr18.gam)
 dtfr18.out
-hist(residuals(dtfr18.mod))
+hist(residuals(dtfr18.gam))
 
-##pull variables from model##
-vars <- as.data.frame(VarCorr(dtfr18.mod2))[, c('grp','vcov')]
-intercept <- fixef(dtfr18.mod2)['(Intercept)']
+##pull coefficients: intercept and variance components for QGglmm##
+vars <- as.data.frame(VarCorr(ddtfr18.gam))[, c('grp','vcov')]
+##GL_alvar region mean (intercept)##
+intercept<-fixef(dtfr18.gam)['(Intercept)']*(nrow(dplyr::filter(flr18, flr18$Region =="GL_alvar"))/nrow(flr17))
+##Prairie region mean (intercept)##
+pra <-fixef(dtfr18.gam)['RegionPrairie']*(nrow(dplyr::filter(flr18, flr18$Region == "Prairie"))/nrow(flr17))
+##MB_alvar region mean (intercept)##
+mba <- fixef(dtfr18.gam)['RegionMB_alvar']*(nrow(dplyr::filter(flr18, flr18$Region =="MB_alvar"))/nrow(flr17))
+#verify data loaded in to objects##
 vars
 intercept
-#latent region mean#
-mu <- intercept
+pra 
+mba
+##look at model values to make sure mu makes sense##
+fixef(dtfr18.gam)
+#should be: ##plus or times? (+ vs *)
+mu <- intercept+pra+mba
+mu
 va <- 4*vars[vars[["grp"]] == "Family.Unique", "vcov"]
 va
 vp <- sum(vars[,"vcov"])
@@ -974,7 +1095,7 @@ lh2
 ##https://stats.stackexchange.com/questions/96972/how-to-interpret-parameters-in-glm-with-family-gamma
 
 ##Pull parameters from fitdistr##
-g <- fitdistr(flr17$DTFF.Ordinal.Day.2017, "gamma")
+g <- fitdistr(flr18$Date.to.Fruit.Oday.2018, "gamma")
 g
 ##Shape parameter (k)##
 k <- g$estimate[1]
@@ -1026,18 +1147,28 @@ n.flr.mod <- glmer(Total.Flowers.2018~Region + (1 | Population) +
 						 family=neg.bin(theta = 1.9207413))
 hist(residuals(n.flr.mod))
 
+##pull coefficients: intercept and variance components for QGglmm##
 vars <- as.data.frame(VarCorr(n.flr.mod))[, c('grp','vcov')]
-intercept <- fixef(n.flr.mod)['(Intercept)']
-##verify data loaded in to objects##
+##GL_alvar region mean (intercept)##
+intercept<-fixef(n.flr.mod)['(Intercept)']*(nrow(dplyr::filter(flr18, flr18$Region =="GL_alvar"))/nrow(flr17))
+##Prairie region mean (intercept)##
+pra <-fixef(n.flr.mod)['RegionPrairie']*(nrow(dplyr::filter(flr18, flr18$Region == "Prairie"))/nrow(flr17))
+##MB_alvar region mean (intercept)##
+mba <- fixef(n.flr.mod)['RegionMB_alvar']*(nrow(dplyr::filter(flr18, flr18$Region =="MB_alvar"))/nrow(flr17))
+#verify data loaded in to objects##
 vars
-##verify data loaded in to objects##
 intercept
+pra 
+mba
+##look at model values to make sure mu makes sense##
+fixef(n.flr.mod)
+#should be: ##plus or times? (+ vs *)
+mu <- intercept+pra+mba
+mu
 
 ##View latent-scale values region mean##
 ##values are for variables from model, not yet converted to observation scale##
 theta <-  1.9207413
-##region mean##
-mu <- intercept
 ##additive variance NOTE: 4 times value due to half-sibling design##
 va <- 4*vars[vars[["grp"]] == "Family.Unique", "vcov"]
 va
@@ -1073,34 +1204,33 @@ f2g <- fitdistr(flr18$No.Fruit.2018, "poisson")
 f3g <- fitdistr(flr18$No.Fruit.2018, "negative binomial")
 ##f4g <- fitdistr(flr18$No.Fruit.2018, "gamma") doesn't work##
 AIC(f1g,f2g,f3g)
-f3g #theta = 0.22335483
-
-##subset out zeros##
-f1g <- fitdistr(flr.18$No.Fruit.2018, "normal")
-f2g <- fitdistr(flr.18$No.Fruit.2018, "poisson")
-f3g <- fitdistr(flr.18$No.Fruit.2018, "negative binomial")
-f4g <- fitdistr(flr.18$No.Fruit.2018, "gamma")
-AIC(f1g,f2g,f3g, f4g)
-f3g #theta = 2.5503853
-f4g 
+f3g #theta = 2.5043671
 
 n.frt.mod <- glmer(No.Fruit.2018~Region + (1 | Population) + 
-						 	(1 | Family.Unique) + (1 | Block.ID), data = flr.18,
-						 family=neg.bin(theta = 2.5503853))
+						 	(1 | Family.Unique) + (1 | Block.ID), data = flr18,
+						 family=neg.bin(theta = 2.5043671))
 hist(residuals(n.frt.mod))
 
+##pull coefficients: intercept and variance components for QGglmm##
 vars <- as.data.frame(VarCorr(n.frt.mod))[, c('grp','vcov')]
-intercept <- fixef(n.frt.mod)['(Intercept)']
-##verify data loaded in to objects##
+##GL_alvar region mean (intercept)##
+intercept<-fixef(n.frt.mod)['(Intercept)']*(nrow(dplyr::filter(flr18, flr18$Region =="GL_alvar"))/nrow(flr17))
+##Prairie region mean (intercept)##
+pra <-fixef(n.frt.mod)['RegionPrairie']*(nrow(dplyr::filter(flr18, flr18$Region == "Prairie"))/nrow(flr17))
+##MB_alvar region mean (intercept)##
+mba <- fixef(n.frt.mod)['RegionMB_alvar']*(nrow(dplyr::filter(flr18, flr18$Region =="MB_alvar"))/nrow(flr17))
+#verify data loaded in to objects##
 vars
-##verify data loaded in to objects##
 intercept
-
-##View latent-scale values region mean##
+pra 
+mba
+##look at model values to make sure mu makes sense##
+fixef(n.frt.mod)
+#should be: ##plus or times? (+ vs *)
+mu <- intercept+pra+mba
+mu
 ##values are for variables from model, not yet converted to observation scale##
-theta <-  2.5503853
-##region mean##
-mu <- intercept
+theta <-  2.5043671
 ##additive variance NOTE: 4 times value due to half-sibling design##
 va <- 4*vars[vars[["grp"]] == "Family.Unique", "vcov"]
 va
@@ -1118,8 +1248,6 @@ herit2 <- QGparams(mu = mu, var.a = va, var.p = vp, theta = theta, model = "negb
 #across all regions, could be worth breaking apart##
 herit2
 
-##NOTE--With Negative binomial and theta from Mason--residuals ok--model failed to converge##
-
 h2[17,1] <- "Number of Fruit"
 h2[17,2] <- "2018"
 h2[17,3] <- herit2$h2.obs
@@ -1132,48 +1260,45 @@ h2
 ###########################
 flr.18 <- filter(df, Flowering.Y.N.2018 >= 1)
 hist(flr.18$sm.3)
-flr18 <- df[!is.na(df$sm.3),]
+flr18 <- df[!is.na(df$seedmass.2018.g.),]
+flr18$sm.3<-flr18$seedmass.2018.g.*1000
+flr18$sm.3<-as.integer(flr18$sm.3)
 hist(flr18$sm.3)
 ##distributions with zeros in##
+descdist(flr18$sm.3)
 f1g <- fitdistr(flr18$sm.3, "normal")
 f2g <- fitdistr(flr18$sm.3, "poisson")
 f3g <- fitdistr(flr18$sm.3, "negative binomial")
 f4g <- fitdistr(flr18$sm.3, "gamma") 
-AIC(f1g,f2g,f3g, f4g)
-f3g #theta = 0.22335483
-f4g #theta = 1.67350953
-
-##subset out zeros##
-f1g <- fitdistr(flr.18$sm.3, "normal")
-f2g <- fitdistr(flr.18$sm.3, "poisson")
-f3g <- fitdistr(flr.18$sm.3, "negative binomial")
-f4g <- fitdistr(flr.18$sm.3, "gamma")
-AIC(f1g,f2g,f3g, f4g)
-f3g #theta = 2.5503853
-f4g 
-
-f1g <- fitdist(flr18$sm.3, "norm")
-f2g <- fitdist(flr18$sm.3, "pois")
-f3g <- fitdist(flr18$sm.3, "nbinom")
-f4g <- fitdist(flr18$sm.3, "gamma") 
-plot(f1g)
-plot(f2g)
-plot(f3g)
-plot(f4g)
+AIC(f1g,f2g,f3g)
+f3g #theta = 0.97499744
 
 seeds18.mod<- glmer(sm.3~Region + (1 | Population) + 
-						  	(1 | Family.Unique) + (1 | Block.ID), data = flr.18,
-						  family = negative.binomial(2.5503853))
+						  	(1 | Family.Unique) + (1 | Block.ID), data = flr18,
+						  family = negative.binomial(0.97499744))
 seeds18.out <-	summary(seeds18.mod)
 seeds18.out
 hist(residuals(seeds18.mod))
+
+##pull coefficients: intercept and variance components for QGglmm##
 vars <- as.data.frame(VarCorr(seeds18.mod))[, c('grp','vcov')]
-intercept <- fixef(seeds18.mod)['(Intercept)']
+##GL_alvar region mean (intercept)##
+intercept<-fixef(seeds18.mod)['(Intercept)']*(nrow(dplyr::filter(flr18, flr18$Region =="GL_alvar"))/nrow(flr17))
+##Prairie region mean (intercept)##
+pra <-fixef(seeds18.mod)['RegionPrairie']*(nrow(dplyr::filter(flr18, flr18$Region == "Prairie"))/nrow(flr17))
+##MB_alvar region mean (intercept)##
+mba <- fixef(seeds18.mod)['RegionMB_alvar']*(nrow(dplyr::filter(flr18, flr18$Region =="MB_alvar"))/nrow(flr17))
+#verify data loaded in to objects##
 vars
 intercept
-#latent region mean#
-mu <- intercept
-theta <- 2.5503853
+pra 
+mba
+##look at model values to make sure mu makes sense##
+fixef(seeds18.mod)
+#should be: ##plus or times? (+ vs *)
+mu <- intercept+pra+mba
+mu
+theta <- 0.97499744
 va <- 4*vars[vars[["grp"]] == "Family.Unique", "vcov"]
 va
 vp <- sum(vars[,"vcov"])
