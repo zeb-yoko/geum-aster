@@ -64,15 +64,47 @@ redata$Block.ID <- as.factor(redata$Block.ID)
 
 # Estimate distribtuions from 2018 data (reuse 2016 and 2017 distributions)
 
+flwno1<- dat2$No.Flowers.2016
+
+flwno2<- dat2$Total.Flowers.2017
+
+frt1<- dat2$No.Fruit.2016
+
+frt2<- dat2$No.Fruit.2017
+
 flwno<- dat2$Total.Flowers.2018
 
 frtno<- dat2$No.Fruit.2018
+
+sm<- dat2$sm
+
+sm2<- dat2$sm.2
+
+sm3<- dat2$sm.3
 
 seeds<-dat2$sm.tot
 
 sm3<- dat2$sm.3
 
 library(MASS)
+
+#2016 flower number
+fl1.1<- fitdistr(flwno1, "normal")
+fl1.2<- fitdistr(flwno1, "negative binomial")#size: 0.087611463
+fl1.3<- fitdistr(flwno1, "poisson")
+
+AIC(fl1.1, fl1.2, fl1.3)
+fl1.2
+
+
+#2017 flower number
+fl2.1<- fitdistr(flwno2, "normal")
+fl2.2<- fitdistr(flwno2, "negative binomial")#size: 0.30514117
+fl2.3<- fitdistr(flwno2, "poisson")
+
+AIC(fl2.1, fl2.2, fl2.3)
+fl2.2
+
 
 #flower number
 fl.1<- fitdistr(flwno, "normal")
@@ -82,7 +114,26 @@ fl.3<- fitdistr(flwno, "poisson")
 AIC(fl.1, fl.2, fl.3)
 fl.2
 
-#fruit number
+
+#2016 fruit number
+frt1.1<- fitdistr(frt1, "normal")
+frt1.2<- fitdistr(frt1, "negative binomial")#size: 0.027821465
+frt1.3<- fitdistr(frt1, "poisson")
+
+AIC(frt1.1, frt1.2, frt1.3)
+frt1.2
+
+
+#2017 fruit number
+frt2.1<- fitdistr(frt2, "normal")
+frt2.2<- fitdistr(frt2, "negative binomial")#size: 0.23720330
+frt2.3<- fitdistr(frt2, "poisson")
+
+AIC(frt2.1, frt2.2, frt2.3)
+frt2.2
+
+
+#2018 fruit number
 frt.1<- fitdistr(frtno, "normal")
 frt.2<- fitdistr(frtno, "negative binomial")#size: 0.22983979
 frt.3<- fitdistr(frtno, "poisson")
@@ -97,6 +148,24 @@ seeds.3<- fitdistr(seeds, "poisson")
 
 AIC(seeds.1, seeds.2, seeds.3)
 seeds.2
+
+#2016 seed mass
+sm.1<- fitdistr(sm, "normal")
+sm.2<- fitdistr(sm, "negative binomial")#size: 0.0058024283
+sm.3<- fitdistr(sm, "poisson")
+
+AIC(sm.1, sm.2, sm.3)
+sm.2
+
+
+#2017 seed mass
+sm2.1<- fitdistr(sm2, "normal")
+sm2.2<- fitdistr(sm2, "negative binomial")#size: 0.08457787
+sm2.3<- fitdistr(sm2, "poisson")
+
+AIC(sm2.1, sm2.2, sm2.3)
+sm2.2
+
 
 #2018 seed mass
 sm3.1<- fitdistr(sm3, "normal")
@@ -134,23 +203,39 @@ famlist <- list(fam.bernoulli(),
                 #10
                 fam.negative.binomial(6.633839e-02))#sm.3 
 
+#Node:   1  2  3  4  5  6  7  8  9  10  11  12  13   14   15   16
+pred<- c(0, 1, 2, 3, 2, 3, 4, 5, 6, 7,  8,  9,  10,  11,  12,  13)
+fam<-  c(1, 1, 1, 1, 1, 1, 1, 2, 3, 4,  5,  6,  7,   8,   9,   10)
 
-pred<- c(0,1,2,3,2,3,4,5,6,4,8,9,10,11,12,13)
-fam<- c(1,1,1,1,1,1,1,2,3,4,5,6,7,8,9,10)
 
-#describe dist. of preds.
-sapply(fam.default(), as.character)[fam]
+#The above graphical model produces a direction of recession/constancy error
 
+# try slightly reducing the model: remove all seed masses, except for 2018
+
+#Node:   1  2  3  4  5  6  7  8  9  10  11  12  13   14   15   16
+pred<- c(0, 1, 2, 3, 2, 3, 4, 5, 6, 7,  8,  9,  10,  11,  12,  13)
+fam<-  c(1, 1, 1, 1, 1, 1, 1, 2, 3, 4,  5,  6,  7,   8,   9,   10)
 
 
 aouta<- aster(resp~varb, pred, fam, varb, id, root, data=redata, famlist=famlist)
 
-summary(aouta, show.graph=TRUE,info.tol = 1e-16)
+summary(aouta, show.graph=TRUE,info.tol = 1e-20)
 
 
 
 
-aout<- aster(resp~varb + fit:(Region), pred, fam, varb, id, root, data=redata, famlist=famlist)
+
+
+
+
+
+
+
+
+
+
+
+aout<- aster(resp~varb + fit:(HabitatType), pred, fam, varb, id, root, data=redata, famlist=famlist)
 
 summary(aout, show.graph=TRUE, info.tol = 1e-16)
 
