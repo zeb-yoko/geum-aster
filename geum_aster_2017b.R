@@ -25,7 +25,7 @@ dat2<- dat[c("Family.Unique",   "Block.ID", "HabitatType", "Region", "Population
 
 ######################
 vars<- c("Germination.Y.N", "Survival.Y.N","Surv2017", "Flower.Y.N.2016","Flower.Y.N.2017",
-         "No.Flowers.2016","Total.Flowers.2017","No.Fruit.2016", "No.Fruit.2017","sm", "sm.2")
+         "No.Flowers.2016","Total.Flowers.2017","No.Fruit.2016", "No.Fruit.2017","sm", "sm.2", "sm2017")
 
 
 #look into distributions for nodes
@@ -49,6 +49,8 @@ seeds<-dat2$sm2017
 sm<-dat$sm
 
 sm2<- dat$sm.2
+
+sm2017<- dat$sm2017
 
 library(MASS)
 
@@ -111,13 +113,22 @@ sm.2.3<- fitdistr(sm2, "poisson")
 AIC(sm.2.1, sm.2.2, sm.2.3)
 sm.2.2
 
+
+#sm2017
+sm2017.2.1<- fitdistr(sm2017, "normal")
+sm2017.2.2<- fitdistr(sm2017, "negative binomial")#size: 8.544092e-02
+sm2017.2.3<- fitdistr(sm2017, "poisson")
+
+AIC(sm2017.2.1, sm2017.2.2, sm2017.2.3)
+sm2017.2.2
+
 #reshape data so that all response variables are located in a single vector in a new data
 #set called "redata"
 redata2017 <- reshape(dat2, varying = list(vars), direction = "long",timevar = "varb", times = as.factor(vars), v.names = "resp")
 
 
 #Designation of fitness variable for 2016 data
-fit <- grepl("sm.2", as.character(redata2017$varb))
+fit <- grepl("sm2017", as.character(redata2017$varb))
 fit<- as.numeric(fit)
 
 redata2017$fit <- fit
@@ -150,15 +161,16 @@ famlist <- list(fam.bernoulli(),
                 fam.negative.binomial(0.027821465),
                 fam.negative.binomial(0.23720330), 
                 fam.negative.binomial(0.0058024283),
-                fam.negative.binomial(0.08457787))
+                fam.negative.binomial(0.08457787),
+                fam.negative.binomial(8.544092e-02))
 
 
 
 
 
-pred<- c(0,1,2,2,3,4,5,6,7,8,9)
+pred<- c(0,1,2,2,3,4,5,6,7,8,9,1)
 
-fam<- c(1,1,1,1,1,2,3,4,5,6,7)
+fam<- c(1,1,1,1,1,2,3,4,5,6,7,8)
 #sapply(fam.default(), as.character)[fam]
 
 #fixed effect model for 2017 with only fitness: note the use of 'famlist'
@@ -178,7 +190,7 @@ aoutb<- aster(resp~varb + fit:(Block.ID), pred, fam, varb, id, root, data=redata
 
 summary(aoutb, show.graph=T, info.tol=1e-11)
 
-anova(aouta, aoutb)#block is significant
+anova(aouta, aoutb)#block on it's own is not significant
 
 
 
@@ -231,6 +243,8 @@ sm<- dat2.gla$sm
 
 sm2<- dat2.gla$sm.2
 
+sm2017<- dat2.gla$sm2017
+
 
 #flwno1
 flwno1.1 <- fitdistr(flwno1, "normal")
@@ -280,6 +294,15 @@ sm2.3 <- fitdistr(sm2, "poisson")
 AIC(sm2.1, sm2.2, sm2.3)
 sm2.2
 
+
+#sm2017
+sm2017.1 <- fitdistr(sm2017, "normal")
+sm2017.2 <- fitdistr(sm2017, "negative binomial")#size:  1.433965e-01
+sm2017.3 <- fitdistr(sm2017, "poisson")
+
+AIC(sm2017.1, sm2017.2, sm2017.3)
+sm2017.2
+
 #make new famlist for alvar data
 famlist.gla <- list(fam.bernoulli(),
                 fam.negative.binomial(0.150132301),
@@ -287,7 +310,8 @@ famlist.gla <- list(fam.bernoulli(),
                 fam.negative.binomial(0.048512293),
                 fam.negative.binomial(0.3951908), 
                 fam.negative.binomial(0.009840565),
-                fam.negative.binomial(1.420398e-01))
+                fam.negative.binomial(1.420398e-01),
+                fam.negative.binomial(1.433965e-01))
 
 
 #alvar aster analysis with only fitness data
@@ -301,7 +325,7 @@ aout<- aster(resp~varb +fit:(Block.ID), pred, fam, varb, id, root, data=redata.g
 
 summary(aout, show.graph=T, info.tol = 1e-10)
 
-anova(aout.a1, aout)#block significant for GL_alvar
+anova(aout.a1, aout)#block not significant for GL_alvar, but that's ok
 
 
 
@@ -316,7 +340,7 @@ pout<- predict.aster(aout, se.fit=TRUE, info.tol=1e-10)
 fred <- data.frame(Block.ID=levels(redata.gla$Block.ID),
                    Germination.Y.N=1, Survival.Y.N=1,Surv2017=1, Flower.Y.N.2016=1,
                    No.Flowers.2016=1, Flower.Y.N.2017=1, Total.Flowers.2017=1, 
-                   No.Fruit.2016=1, No.Fruit.2017=1, sm=1, sm.2=1, root = 1)
+                   No.Fruit.2016=1, No.Fruit.2017=1, sm=1, sm.2=1, sm2017=1, root = 1)
 
 # reshape the "made up data" just as the actual data
 renewdata <- reshape(fred, varying = list(vars),
@@ -330,10 +354,10 @@ layer<- gsub("[0-9]", "", as.character(renewdata$varb))
 renewdata<- data.frame(renewdata, layer= layer)
 
 # add Seedmass.2016 in new layer col of renewdata as numeric, called fit
-fit<- as.numeric(layer=="sm.2")
+fit<- as.numeric(layer=="sm2017")
 
 #charlie add
-renewdata$fit <- as.numeric(as.character(renewdata$varb) == "sm.2")
+renewdata$fit <- as.numeric(as.character(renewdata$varb) == "sm2017")
 
 # add fit to renewdata
 renewdata<- data.frame(renewdata, fit = fit)
@@ -343,12 +367,12 @@ renewdata<- data.frame(renewdata, fit = fit)
 nReg<- nrow(fred)#all data has same number of blocks so any file will do
 nnode<- length(vars)
 amat<- array(0, c(nReg, nnode, nReg))
-dim(amat)# makes an 12 x 11 x 12 matrix (2 habitat types and 6 nodes of graphicla model)
+dim(amat)# makes an 12 x 12 x 12 matrix (2 habitat types and 6 nodes of graphicla model)
 
 #only want means for k'th individual that contribute to expected
 #fitness, and want to add only Seedmass.2016 entries
 
-foo<- grepl("sm.2", vars)
+foo<- grepl("sm2017", vars)
 for(k in 1:nReg)
   amat[k, foo, k]<- 1
 
@@ -374,7 +398,7 @@ colnames(gl.a)<- c("Expected Fitness", "SE")
 #as block does not explain a sifnificant amount of variation, can omit and used following estimates
 round(gl.a, 3) 
 
-summary(gl.a)#median= 614.17 -> corresponds with block 9: 576.436 (125.247)
+summary(gl.a)#median= 615.8 -> corresponds with block 9: 576.436 (125.247)
 
 
 #########################################################################
@@ -393,6 +417,8 @@ frt2<- dat2.mba$No.Fruit.2017
 sm<- dat2.mba$sm
 
 sm2<- dat2.mba$sm.2
+
+sm2017<- dat2.mba$sm2017
 
 
 #flwno1
@@ -443,6 +469,14 @@ sm2.3 <- fitdistr(sm2, "poisson")
 AIC(sm2.1, sm2.2, sm2.3)
 sm2.2
 
+#sm2017
+sm2017.1 <- fitdistr(sm2017, "normal")
+sm2017.2 <- fitdistr(sm2017, "negative binomial")#size: 8.883848e-02
+sm2017.3 <- fitdistr(sm2017, "poisson")
+
+AIC(sm2017.1, sm2017.2, sm2017.3)
+sm2017.2
+
 #make new famlist for alvar data
 famlist.mba <- list(fam.bernoulli(),
                     fam.negative.binomial(0.06758479),
@@ -450,7 +484,8 @@ famlist.mba <- list(fam.bernoulli(),
                     fam.negative.binomial(0.006770819),
                     fam.negative.binomial(0.30670838), 
                     fam.negative.binomial(0.009840565),
-                    fam.negative.binomial(1.420398e-01))
+                    fam.negative.binomial(1.420398e-01),
+                    fam.negative.binomial(8.883848e-02))
 
 
 #alvar aster analysis with only fitness data
@@ -479,7 +514,7 @@ pout<- predict.aster(aout, se.fit=TRUE, info.tol=1e-10)
 fred <- data.frame(Block.ID=levels(redata.mba$Block.ID),
                    Germination.Y.N=1, Survival.Y.N=1,Surv2017=1, Flower.Y.N.2016=1,
                    No.Flowers.2016=1, Flower.Y.N.2017=1, Total.Flowers.2017=1, 
-                   No.Fruit.2016=1, No.Fruit.2017=1, sm=1, sm.2=1, root = 1)
+                   No.Fruit.2016=1, No.Fruit.2017=1, sm=1, sm.2=1, sm2017=1,root = 1)
 
 # reshape the "made up data" just as the actual data
 renewdata <- reshape(fred, varying = list(vars),
@@ -493,10 +528,10 @@ layer<- gsub("[0-9]", "", as.character(renewdata$varb))
 renewdata<- data.frame(renewdata, layer= layer)
 
 # add Seedmass.2016 in new layer col of renewdata as numeric, called fit
-fit<- as.numeric(layer=="sm.2")
+fit<- as.numeric(layer=="sm2017")
 
 #charlie add
-renewdata$fit <- as.numeric(as.character(renewdata$varb) == "sm.2")
+renewdata$fit <- as.numeric(as.character(renewdata$varb) == "sm2017")
 
 # add fit to renewdata
 renewdata<- data.frame(renewdata, fit = fit)
@@ -506,12 +541,12 @@ renewdata<- data.frame(renewdata, fit = fit)
 nReg<- nrow(fred)#all data has same number of blocks so any file will do
 nnode<- length(vars)
 amat<- array(0, c(nReg, nnode, nReg))
-dim(amat)# makes an 12 x 11 x 12 matrix (2 habitat types and 6 nodes of graphicla model)
+dim(amat)# makes an 12 x 12 x 12 matrix (2 habitat types and 6 nodes of graphicla model)
 
 #only want means for k'th individual that contribute to expected
 #fitness, and want to add only Seedmass.2016 entries
 
-foo<- grepl("sm.2", vars)
+foo<- grepl("sm2017", vars)
 for(k in 1:nReg)
   amat[k, foo, k]<- 1
 
@@ -555,6 +590,8 @@ frt2<- dat2.p$No.Fruit.2017
 sm<- dat2.p$sm
 
 sm2<- dat2.p$sm.2
+
+sm2017<- dat2.p$sm2017
 
 
 #flwno1
@@ -605,6 +642,14 @@ sm2.3 <- fitdistr(sm2, "poisson")
 AIC(sm2.1, sm2.2, sm2.3)
 sm2.2
 
+#sm2017
+sm2017.1 <- fitdistr(sm2017, "normal")
+sm2017.2 <- fitdistr(sm2017, "negative binomial")#size: 0.03511662
+sm2017.3 <- fitdistr(sm2017, "poisson")
+
+AIC(sm2017.1, sm2017.2, sm2017.3)
+sm2017.2
+
 #make new famlist for alvar data
 famlist.p <- list(fam.bernoulli(),
                     fam.negative.binomial(0.028979806),
@@ -612,7 +657,8 @@ famlist.p <- list(fam.bernoulli(),
                     fam.negative.binomial(0.003323081),
                     fam.negative.binomial(0.11502653), 
                     fam.negative.binomial(0.009840565),
-                    fam.negative.binomial(0.034831540))
+                    fam.negative.binomial(0.034831540),
+                    fam.negative.binomial(0.03511662))
 
 
 #alvar aster analysis with only fitness data
@@ -641,7 +687,7 @@ pout<- predict.aster(aout, se.fit=TRUE, info.tol=1e-10)
 fred <- data.frame(Block.ID=levels(redata.p$Block.ID),
                    Germination.Y.N=1, Survival.Y.N=1,Surv2017=1, Flower.Y.N.2016=1,
                    No.Flowers.2016=1, Flower.Y.N.2017=1, Total.Flowers.2017=1, 
-                   No.Fruit.2016=1, No.Fruit.2017=1, sm=1, sm.2=1, root = 1)
+                   No.Fruit.2016=1, No.Fruit.2017=1, sm=1, sm.2=1,sm2017=1, root = 1)
 
 # reshape the "made up data" just as the actual data
 renewdata <- reshape(fred, varying = list(vars),
@@ -655,10 +701,10 @@ layer<- gsub("[0-9]", "", as.character(renewdata$varb))
 renewdata<- data.frame(renewdata, layer= layer)
 
 # add Seedmass.2016 in new layer col of renewdata as numeric, called fit
-fit<- as.numeric(layer=="sm.2")
+fit<- as.numeric(layer=="sm2017")
 
 #charlie add
-renewdata$fit <- as.numeric(as.character(renewdata$varb) == "sm.2")
+renewdata$fit <- as.numeric(as.character(renewdata$varb) == "sm2017")
 
 # add fit to renewdata
 renewdata<- data.frame(renewdata, fit = fit)
@@ -668,12 +714,12 @@ renewdata<- data.frame(renewdata, fit = fit)
 nReg<- nrow(fred)#all data has same number of blocks so any file will do
 nnode<- length(vars)
 amat<- array(0, c(nReg, nnode, nReg))
-dim(amat)# makes an 12 x 11 x 12 matrix (2 habitat types and 6 nodes of graphicla model)
+dim(amat)# makes an 12 x 12 x 12 matrix (2 habitat types and 6 nodes of graphicla model)
 
 #only want means for k'th individual that contribute to expected
 #fitness, and want to add only Seedmass.2016 entries
 
-foo<- grepl("sm.2", vars)
+foo<- grepl("sm2017", vars)
 for(k in 1:nReg)
   amat[k, foo, k]<- 1
 
@@ -699,7 +745,7 @@ colnames(pr)<- c("Expected Fitness", "SE")
 #as block does not explain a sifnificant amount of variation, can omit and used following estimates
 round(pr, 3) 
 
-summary(pr)#median: 67.49 -> corresponds to block 6: 65.652 (63.235)
+summary(pr)#median: 68.02 -> corresponds to block 8: 70.379 (75.872)
 
 
 
