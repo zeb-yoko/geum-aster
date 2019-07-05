@@ -7,23 +7,21 @@ setwd("C:/Users/Mason Kulbaba/Dropbox/git/geum-aster")
 #load data
 #dat<- read.csv("NV_CG_Experiment2.csv")
 
-dat<- read.csv("fitness_landscape_data.csv")
+dat<- read.csv("fitness_landscape_data_cleaned.csv")
+
 
 #subset data for 2016 analysis
-dat2<- dat[c( "Family.Unique",   "Block.ID", "HabitatType","Dist.from.cg.km",
+dat2<- dat[c( "Family.Unique",   "Block.ID", "HabitatType","Dist.from.cg.km", "No.Days.to.Germ",
              "Region", "Population", "Germination.Y.N","Survival.Y.N", "Flower.Y.N.2016",
              "No.Flowers.2016", "Fruit.Y.N.2016", "No.Fruit.2016", "sm")]
 
-#want to merge other covarite (predictor data) with above data for fitness landscape work
+#remove rows with NAs in "days to germ." variable
 
-dat2<-dat
+dat3<- subset(dat2, No.Days.to.Germ >0)
 
-names(dat2)#2341
-names(cov2)#2345
+dat3<- subset(dat3, Germination.Y.N==1 | Germination.Y.N==0)
 
-
-
-
+dat2<-dat3
 
 #set response variables -> these represent variables in graphical model
 vars<- c("Germination.Y.N","Survival.Y.N", "Flower.Y.N.2016", "No.Flowers.2016", "No.Fruit.2016", "sm")
@@ -31,7 +29,7 @@ vars<- c("Germination.Y.N","Survival.Y.N", "Flower.Y.N.2016", "No.Flowers.2016",
 
 #reshape data so that all response variables are located in a single vector in a new data
 #set called "redata"
-redata2016 <- reshape(dat2, varying = list(vars), direction = "long",timevar = "varb", times = as.factor(vars), v.names = "resp")
+redata2016 <- reshape(dat3, varying = list(vars), direction = "long",timevar = "varb", times = as.factor(vars), v.names = "resp")
 
 #write.csv(redata2016, file="redata2016.csv", row.names = FALSE, quote = FALSE)
 
@@ -67,78 +65,151 @@ vars
 #Germ, Survival, Flower.Y.N, all bernoulli
 
 flwno<- dat2$No.Flowers.2016
-flw.no<- subset(flwno, flwno >0)
+
 frtno<- dat2$No.Fruit.2016
-frt.no<-subset(frtno, frtno >0)
+
 sm<- dat2$sm
-sm.0<- subset(sm, sm > 0)
+
 
 library(MASS)
 
-fl.1<- fitdistr(flw.no, "normal")
-fl.2<- fitdistr(flw.no, "negative binomial")#size: 1.12571436
-fl.3<- fitdistr(flw.no, "poisson")
+fl.1<- fitdistr(flwno, "normal")
+fl.2<- fitdistr(flwno, "negative binomial")#size: 0.161672878
+fl.3<- fitdistr(flwno, "poisson")
 
 AIC(fl.1, fl.2, fl.3)
+fl.2
 
-frt.1<- fitdistr(frt.no, "normal")
-frt.2<- fitdistr(frt.no, "negative binomial")#size: 3.5074887
-frt.3<- fitdistr(frt.no, "poisson")
+
+frt.1<- fitdistr(frtno, "normal")
+frt.2<- fitdistr(frtno, "negative binomial")#size:  0.045111784
+frt.3<- fitdistr(frtno, "poisson")
 
 AIC(frt.1, frt.2, frt.3)
 
-sm.1<- fitdistr(sm.0, "normal")
-sm.2<- fitdistr(sm.0, "negative binomial")#size: 1.0341103
-sm.3<- fitdistr(sm.0, "poisson")
+frt.2
+
+sm.1<- fitdistr(sm, "normal")
+sm.2<- fitdistr(sm, "negative binomial")#size: 0.009215800 
+sm.3<- fitdistr(sm, "poisson")
 
 AIC(sm.1, sm.2, sm.3)
 
+sm.2
+
 #####################################
-#need to check dist for region-specific 
+# Overall Model work
 
 #load aster package
 library(aster)
 
 #set family list
 
-famlist<- list(fam.bernoulli(), fam.negative.binomial(1.12571436), fam.negative.binomial(3.5074887),
-               fam.negative.binomial(1.0341103))
+famlist<- list(fam.bernoulli(), 
+               fam.negative.binomial(0.161672878), 
+               fam.negative.binomial(0.045111784),
+               fam.negative.binomial(0.009215800))
 
 #set graphical mode and dist. for fitness nodes
 pred<- c(0,1,2,3,4,5)
-fam<- c(1,1,1,2,3,4) #might want to play with these distributions, especially seedmass
+fam<- c(1,1,1,2,3,4) 
 
 #describe dist. of preds.
 sapply(fam.default(), as.character)[fam]
 
 #fixed effect model for 2016 with only fitness variable: this is the "basic" model
 # that we compare with later models, to determine significance of facotrs (e.g. Habitat Type, etc.)
-aout2016a<- aster(resp~varb +0, pred, fam, varb, id, root, data=redata2016, famlist = famlist)
+aout2016<- aster(resp~varb, pred, fam, varb, id, root, data=redata2016, famlist = famlist)
 
-summary(aout2016a, show.graph=TRUE)
+summary(aout2016, show.graph=TRUE)
 
 #add distance from seed source
-aout1<- aster(resp~varb+0 + fit:Dist.from.cg.km, pred, fam, varb, id, root, data=redata2016, famlist = famlist)
+aout1<- aster(resp~varb+0 + fit:Region, pred, fam, varb, id, root, data=redata2016, famlist = famlist)
 
-summary(aout1, show.graph=T, info.tol=1e-11)
+summary(aout1, show.graph=T)
 
-aout<- aster(resp~varb+Dist.from.cg.km + No.Days.to.Germ + I(Dist.from.cg.km^2) +
-               I(No.Days.to.Germ^2) + I(2*Dist.from.cg.km*No.Days.to.Germ), pred, fam, varb, id, root, data=redata2016, famlist = famlist)
+anova(aout2016, aout1)#Region not significant here, but we knew that and it's ok.
 
-summary(aout, show.graph=T, info.tol=1e-11)
 
-#liklihood ratio test
-anova(aout2016a, aout1, aout)# distance from seed source is significant!
+####################################################################################
 
-#Start working with Dist from source as basic model. Note: these are unconditional models
+#Divide into region-specific data set and fit node distributions
 
-aout$type
+#Start with GL_alvar
+
+dat.gla<- subset(dat2, Region=="GL_alvar")
+dat.gla<- droplevels(dat.gla)
+
+
+flwno<- dat.gla$No.Flowers.2016
+
+frtno<- dat.gla$No.Fruit.2016
+
+sm<- dat.gla$sm
+
+
+library(MASS)
+
+fl.1<- fitdistr(flwno, "normal")
+fl.2<- fitdistr(flwno, "negative binomial")#size: 0.23784984
+fl.3<- fitdistr(flwno, "poisson")
+
+AIC(fl.1, fl.2, fl.3)
+fl.2
+
+
+frt.1<- fitdistr(frtno, "normal")
+frt.2<- fitdistr(frtno, "negative binomial")#size: 0.06728733
+frt.3<- fitdistr(frtno, "poisson")
+
+AIC(frt.1, frt.2, frt.3)
+
+frt.2
+
+sm.1<- fitdistr(sm, "normal")
+sm.2<- fitdistr(sm, "negative binomial")#size: 0.013494317
+sm.3<- fitdistr(sm, "poisson")
+
+AIC(sm.1, sm.2, sm.3)
+
+sm.2
+
+#set gla famlist
+
+famlist.gla<- list(fam.bernoulli(), 
+               fam.negative.binomial(0.23784984), 
+               fam.negative.binomial(0.06728733),
+               fam.negative.binomial(0.013494317))
+
+redata.gla<- subset(redata2016, Region=="GL_alvar")
+redata.gla<- droplevels(redata.gla)
+
+
+
+aout1<- aster(resp~varb, pred, fam, varb, id, root, data=redata.gla, famlist = famlist.gla)
+
+summary(aout1, show.graph=TRUE, info.tol=1e-16)
+
+
+
+#Add dist to seed source and Number of days to germ
+aout3<- aster(resp~varb+0+Dist.from.cg.km + No.Days.to.Germ + I(Dist.from.cg.km^2) + I(No.Days.to.Germ^2) + I(2*Dist.from.cg.km*No.Days.to.Germ), pred, fam, varb, id, root, 
+            maxiter=8000,data=redata.gla, famlist = famlist.gla)
+
+summary(aout3, show.graph=T, info.tol=1e-13)
+
+
+#check for coefficients of above model
+
+aout3$coefficients
+
+aout<- aout3
 
 
 ######################################################################
 # Estimate Selection Gradient (distance from source)
 
-pout <- predict(aout1)
+pout <- predict(aout)
 pout <- matrix(pout, nrow = nrow(aout1$x), ncol = ncol(aout1$x))
 colnames(pout) <- colnames(aout1$x)
 mufit <- pout[, grep("sm", colnames(pout))]
