@@ -3,7 +3,7 @@
 ##Zebadiah.yoko@gmail.com##
 
 df <- read.csv("Region-level_heritabilities_and_evolvability.csv")
-
+library(tidyverse)
 ##Create a table to compile fitness estimates## 
 col.classes = c("character", "numeric", "numeric")
 col.names = c("Region", "Fitness", "SE")
@@ -33,8 +33,22 @@ gg <- ggplot(df, aes(x=Trait, y=Heritability, col = Region)) +
 	geom_point() + facet_grid(.~Year)
 gg				 
 
-gg16 <- ggplot(y16, aes(x=Trait, y=Heritability, col = Region)) +geom_point()
+gg16 <- ggplot(y16, aes(x=Trait, y=Heritability, col = Region)) +
+	geom_point(size=3) + theme_zpub()
 gg16			 
+
+gg17 <- ggplot(y17, aes(x=Trait, y=Heritability, col = Region)) +
+	geom_point(size=3) + theme_zpub()
+gg17	
+
+gg18 <- ggplot(y18, aes(x=Trait, y=Heritability, col = Region)) +
+	geom_point(size=3) + theme_zpub()
+gg18	
+
+ggsave('h2_2016.png', plot = gg16)
+ggsave('h2_2017.png', plot = gg17)
+ggsave('h2_2018.png', plot = gg18)
 
 filter(df, Trait =="DTFF") %>% 
 ggplot(aes(x=Year, y=Heritability, col = Region)) +geom_point()
+
