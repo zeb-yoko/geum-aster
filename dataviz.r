@@ -4,23 +4,6 @@
 
 df <- read.csv("Region-level_heritabilities_and_evolvability.csv")
 library(tidyverse)
-##Create a table to compile fitness estimates## 
-##or, open .csv created by mason##
-col.classes = c("character", "numeric", "numeric")
-col.names = c("Region", "Fitness", "SE")
-fitness16 <- read.table(text = "",colClasses = col.classes, col.names = col.names)
-fitness16[1,1] <- "GLA"
-fitness16[1,2] <- 3.027
-fitness16[1,3] <- 1.246
-fitness16[2,1] <- "MBA"
-fitness16[2,2] <- 0
-fitness16[2,3] <- NA
-fitness16[3,1] <- "PRA"
-fitness16[3,2] <- 0
-fitness16[3,3] <- NA
-
-
-fitness16
 
 gla <- subset(df, Region == 'GLA')
 mba <- subset(df, Region == 'MBA')
@@ -53,6 +36,7 @@ ggsave('h2_2018.png', plot = gg18)
 filter(df, Trait =="DTFF") %>% 
 ggplot(aes(x=Year, y=Heritability, col = Region)) +geom_point()
 
+##Fitness graphing data and code##
 seeds <- read.csv('fitness_estimates.csv')
 pd <- position_dodge(0.25) # move them .05 to the left and right
 
