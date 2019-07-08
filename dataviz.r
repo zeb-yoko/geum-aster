@@ -5,6 +5,7 @@
 df <- read.csv("Region-level_heritabilities_and_evolvability.csv")
 library(tidyverse)
 ##Create a table to compile fitness estimates## 
+##or, open .csv created by mason##
 col.classes = c("character", "numeric", "numeric")
 col.names = c("Region", "Fitness", "SE")
 fitness16 <- read.table(text = "",colClasses = col.classes, col.names = col.names)
@@ -51,4 +52,14 @@ ggsave('h2_2018.png', plot = gg18)
 
 filter(df, Trait =="DTFF") %>% 
 ggplot(aes(x=Year, y=Heritability, col = Region)) +geom_point()
+
+seeds <- read.csv('fitness_estimates.csv')
+pd <- position_dodge(0.25) # move them .05 to the left and right
+
+seeds$Year<-as.factor(seeds$Year)
+sviz <-	ggplot(seeds, aes(x=Year, y=W, col = Region)) +
+	geom_point(size=3, position = pd) + 
+	geom_errorbar(aes(ymin=W-Stand.Err, ymax=W+Stand.Err), width=.1, position = pd ) +
+	theme_zpub()+geom_hline(yintercept=0,linetype='dotted')
+sviz
 
