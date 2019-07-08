@@ -1,26 +1,26 @@
 
-# This code is an attempt to "redo" the 2017 data cleaning, and subsequent analysis,
-# in an attempt to resolve whatever issue was causing all estimates of fitness across
-# all levels of a factors to be identical (and standard error)
-
-# data to be used is the second data set sent by Zeb, that now includes measure 
-# of the distance from seed source to common garden in North Dakota
-
-
 setwd("C:/Users/Mason Kulbaba/Dropbox/git/geum-aster")
 
-#load data
-#dat<- read.csv("NV_CG_Experiment2.csv")
 
-dat<- read.csv("cleaned_data_for_aster.csv")
+dat<- read.csv("full_clean_geum_experiment.csv")
+
+
 
 #subset data for 2017 analysis
-dat2<- dat[c("Family.Unique",   "Block.ID", "HabitatType", "Region", "Population",
+dat2<- dat[c("Family.Unique",   "Block.ID", "HabitatType", "Region", "Population", "No.Days.to.Germ",
              "Dist.from.cg.km","Germination.Y.N","Survival.Y.N","Survival.Y.N.2017", 
              "Flower.Y.N.2016","Flower.Y.N.2017","No.Flowers.2016","Total.Flowers.2017",
              "Fruit.Y.N.2016","Fruit.Y.N.2017", "No.Fruit.2016","No.Fruit.2017",
              "sm", "sm.2", "Surv2017", "sm2017")]
 
+
+#remove rows with NAs in "days to germ." variable
+
+dat3<- subset(dat2, No.Days.to.Germ >0)
+
+dat3<- subset(dat3, Germination.Y.N==1 | Germination.Y.N==0)
+
+dat2<-dat3
 
 
 ######################
@@ -248,7 +248,7 @@ sm2017<- dat2.gla$sm2017
 
 #flwno1
 flwno1.1 <- fitdistr(flwno1, "normal")
-flwno1.2 <- fitdistr(flwno1, "negative binomial")#size: 0.150132301
+flwno1.2 <- fitdistr(flwno1, "negative binomial")#size: 0.23784984
 flwno1.3 <- fitdistr(flwno1, "poisson")
 
 AIC(flwno1.1, flwno1.2, flwno1.3)
@@ -256,7 +256,7 @@ flwno1.2
 
 #flwno2
 flwno2.1 <- fitdistr(flwno2, "normal")
-flwno2.2 <- fitdistr(flwno2, "negative binomial")#size: 0.49295158
+flwno2.2 <- fitdistr(flwno2, "negative binomial")#size: 1.49100042
 flwno2.3 <- fitdistr(flwno2, "poisson")
 
 AIC(flwno2.1, flwno2.2, flwno2.3)
@@ -264,7 +264,7 @@ flwno2.2
 
 #frt1
 frt1.1 <- fitdistr(frt1, "normal")
-frt1.2 <- fitdistr(frt1, "negative binomial")#size: 0.048512293
+frt1.2 <- fitdistr(frt1, "negative binomial")#size: 0.06728733
 frt1.3 <- fitdistr(frt1, "poisson")
 
 AIC(frt1.1, frt1.2, frt1.3)
@@ -272,7 +272,7 @@ frt1.2
 
 #frt2
 frt2.1 <- fitdistr(frt2, "normal")
-frt2.2 <- fitdistr(frt2, "negative binomial")#size: 0.3951908
+frt2.2 <- fitdistr(frt2, "negative binomial")#size: 0.91304234
 frt2.3 <- fitdistr(frt2, "poisson")
 
 AIC(frt2.1, frt2.2, frt2.3)
@@ -280,7 +280,7 @@ frt2.2
 
 #sm
 sm.1 <- fitdistr(sm, "normal")
-sm.2 <- fitdistr(sm, "negative binomial")#size: 0.009840565
+sm.2 <- fitdistr(sm, "negative binomial")#size: 0.013494317
 sm.3 <- fitdistr(sm, "poisson")
 
 AIC(sm.1, sm.2, sm.3)
@@ -288,7 +288,7 @@ sm.2
 
 #sm.2
 sm2.1 <- fitdistr(sm2, "normal")
-sm2.2 <- fitdistr(sm2, "negative binomial")#size: 1.420398e-01
+sm2.2 <- fitdistr(sm2, "negative binomial")#size: 0.32842301
 sm2.3 <- fitdistr(sm2, "poisson")
 
 AIC(sm2.1, sm2.2, sm2.3)
@@ -297,7 +297,7 @@ sm2.2
 
 #sm2017
 sm2017.1 <- fitdistr(sm2017, "normal")
-sm2017.2 <- fitdistr(sm2017, "negative binomial")#size:  1.433965e-01
+sm2017.2 <- fitdistr(sm2017, "negative binomial")#size:  0.33367351
 sm2017.3 <- fitdistr(sm2017, "poisson")
 
 AIC(sm2017.1, sm2017.2, sm2017.3)
@@ -305,19 +305,19 @@ sm2017.2
 
 #make new famlist for alvar data
 famlist.gla <- list(fam.bernoulli(),
-                fam.negative.binomial(0.150132301),
-                fam.negative.binomial(0.49295158),
-                fam.negative.binomial(0.048512293),
-                fam.negative.binomial(0.3951908), 
-                fam.negative.binomial(0.009840565),
-                fam.negative.binomial(1.420398e-01),
-                fam.negative.binomial(1.433965e-01))
+                fam.negative.binomial(0.23784984),
+                fam.negative.binomial(1.49100042),
+                fam.negative.binomial(0.06728733),
+                fam.negative.binomial(0.91304234), 
+                fam.negative.binomial(0.013494317),
+                fam.negative.binomial(0.32842301),
+                fam.negative.binomial(0.33367351))
 
 
 #alvar aster analysis with only fitness data
 aout.a1<- aster(resp~varb, pred, fam, varb, id, root, data=redata.gla,famlist = famlist.gla)
 
-summary(aout.a1, show.graph=T, info.tol=1e-10)
+summary(aout.a1, show.graph=T, info.tol=1e-16)
 
 
 
