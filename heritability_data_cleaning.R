@@ -8,7 +8,7 @@
 dat2<- read.csv("NV_CG_Experiment2wdist2.csv")
 
 
-View(dat2)
+#View(dat2)
 #survival but no germination
 subset(dat2, Germination.Y.N==0 & Survival.Y.N==1)# no errors
 
@@ -95,16 +95,16 @@ subset(dat2, dat2$sm.2 >0 & dat2$No.Fruit.2017==0)
 library(dplyr)
 
 ##dat3<-dat2[!(dat2$sm.2 >0 & dat2$No.Fruit.2017==0),] ##line doesn't work bc in raw data its NA not 0##
-dat3 <- dplyr::filter(dat2, Sample.ID != "CAR-NBA.4.6")
-dat3 <- dplyr::filter(dat3, Sample.ID != "MB-CRN.2.7")
-dat3 <- dplyr::filter(dat3, Sample.ID != "MB-MR.32.12")
-dat3 <- dplyr::filter(dat3, Sample.ID != "NAP-CE.6.3")
-dat3 <- dplyr::filter(dat3, Sample.ID != "SD-MUD.10.3")
-dat3 <- dplyr::filter(dat3, Sample.ID != "SD-PMG.11")
+#dat3 <- dplyr::filter(dat2, Sample.ID != "CAR-NBA.4.6")
+#dat3 <- dplyr::filter(dat3, Sample.ID != "MB-CRN.2.7")
+#dat3 <- dplyr::filter(dat3, Sample.ID != "MB-MR.32.12")
+#dat3 <- dplyr::filter(dat3, Sample.ID != "NAP-CE.6.3")
+#dat3 <- dplyr::filter(dat3, Sample.ID != "SD-MUD.10.3")
+#dat3 <- dplyr::filter(dat3, Sample.ID != "SD-PMG.11")
 
 ##Do we want these filtered out? probably not, NA's okay for heritability analyses##
 #dat2<-dat3
-subset(dat2, dat2$sm.2 >0 & dat2$No.Fruit.2017==0)# still shows sd-mud.10.3
+#subset(dat2, dat2$sm.2 >0 & dat2$No.Fruit.2017==0)# still shows sd-mud.10.3
 dat2$No.Fruit.2017[dat2$Sample.ID =="SD-MUD.10.3"]=NA
 subset(dat2, dat2$sm.2 >0 & dat2$No.Fruit.2017==0)# FILLED IN AS NA
 
@@ -162,7 +162,6 @@ dat2$Flowering.Y.N.2018[dat2$Family.Unique=="SD-MUD_18" & dat2$Block.ID==6]=1
 subset(dat2, Fruit.Y.N.2018==1 & Total.Flowers.2018==0)#6 errors
 ########################
 ########################
-
 
 #correct above errors
 
@@ -255,7 +254,7 @@ subset(dat2, Flowering.Y.N.2018==1 & Surv2018==0)# 0 errors
 subset(dat2, Fruit.Y.N.2018==1 & Total.Flowers.2018==0)# 0 errors
 View(dat2)
 
-write.csv(dat2, "cleaned_NV_CG_experiment_data.csv", row.names=F)
+write.csv(dat2, "cleaned_NV_CG_heritability_data.csv", row.names=F)
 
 
 
