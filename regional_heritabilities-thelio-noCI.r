@@ -1093,7 +1093,7 @@ cv.pra <- 100* (sqrt(herit.pra$var.a.obs)/herit.pra$mean.obs)
 ##################
 
 ##table to compile heritabilities## 
-h2[16,1] <- "seedmass (mg)"
+h2[16,1] <- "Seedmass (mg)"
 h2[16,2] <- "2016"
 h2[16,3] <- herit.gla$h2.obs
 h2[16,4] <- ev.gla
@@ -1101,7 +1101,7 @@ h2[16,5] <- "GLA"
 h2[16,6] <- cv.gla
 h2[16,7] <- herit.gla$var.a.obs
 
-h2[17,1] <- "seedmass (mg)"
+h2[17,1] <- "Seedmass (mg)"
 h2[17,2] <- "2016"
 h2[17,3] <- herit.mba$h2.obs
 h2[17,4] <- ev.mba 
@@ -1109,7 +1109,7 @@ h2[17,5] <-	"MBA"
 h2[17,6] <- cv.mba
 h2[17,7] <- herit.mba$var.a.obs
 
-h2[18,1] <- "seedmass (mg)"
+h2[18,1] <- "Seedmass (mg)"
 h2[18,2] <- "2016"
 h2[18,3] <- herit.pra$h2.obs
 h2[18,4] <- ev.pra
